@@ -93,7 +93,19 @@ export default function FormModalMSE({ onClose, existingData }) {
   useEffect(() => {
     if (existingData) {
       setMeta(existingData.meta || {});
-      setMonitoring(existingData.monitoring || monitoringTemplate);
+
+      // Gabungkan struktur monitoring lama dengan template
+      const mergedMonitoring = monitoringTemplate.map((templateMon) => {
+        const existingMon = (existingData.monitoring || []).find(
+          (mon) => mon.uraian === templateMon.uraian
+        );
+        return {
+          ...templateMon,
+          items: existingMon?.items || templateMon.items,
+        };
+      });
+
+      setMonitoring(mergedMonitoring);
     }
   }, [existingData]);
 

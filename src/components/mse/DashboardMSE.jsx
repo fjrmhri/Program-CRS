@@ -82,7 +82,7 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
           <p className="text-gray-500 text-sm">Tidak ada data yang cocok.</p>
         ) : (
           <div className="overflow-x-auto w-full">
-            <table className="min-w-[380px] sm:min-w-[600px] w-full text-xs sm:text-sm border rounded">
+            <table className="min-w-[470px] sm:min-w-[600px] w-full text-xs sm:text-sm border rounded">
               <thead className="bg-gray-100">
                 <tr>
                   <th className="px-2 py-2 text-left">Nama UMKM</th>
