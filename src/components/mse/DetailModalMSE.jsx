@@ -102,6 +102,7 @@ export default function DetailModalMSE({ data, onClose }) {
             ["Estate", meta.estate],
             ["CDO", meta.cdo],
             ["Klasifikasi", meta.klasifikasi],
+            ["Tanggal Monitoring", meta.tanggal],
           ].map(([label, val]) => (
             <div key={label} className="flex justify-between">
               <b>{label}:</b> <span>{val || "-"}</span>
