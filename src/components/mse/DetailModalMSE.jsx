@@ -6,7 +6,7 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import MSEDocument from "./MSEDocument";
 
 export default function DetailModalMSE({ data, onClose }) {
-  const { meta, monitoring = [], comparison } = data;
+  const { meta, monitoring = [] } = data;
 
   const formatHasil = (val) => {
     if (!val || val === "-") return "-";
@@ -44,32 +44,15 @@ export default function DetailModalMSE({ data, onClose }) {
     });
     y += 4;
 
-    const headers = [
-      "Uraian",
-      "Item",
-      "Hasil Monitoring",
-      ...(comparison ? ["Hasil Perbandingan"] : []),
-    ];
+    const headers = ["Uraian", "Item", "Hasil Monitoring"];
 
-    const body = monitoring.flatMap((row, i) =>
+    const body = monitoring.flatMap((row) =>
       row.uraian === "Omset / penjualan per bulan"
-        ? [
-            [
-              row.uraian,
-              "-",
-              formatHasil(row.items?.[0]?.hasil),
-              comparison
-                ? formatHasil(comparison[i]?.items?.[0]?.hasil)
-                : undefined,
-            ],
-          ]
-        : row.items.map((item, j) => [
+        ? [[row.uraian, "-", formatHasil(row.items?.[0]?.hasil)]]
+        : row.items.map((item) => [
             row.uraian,
             item.nama || "-",
             formatHasil(item.hasil),
-            comparison
-              ? formatHasil(comparison[i]?.items?.[j]?.hasil)
-              : undefined,
           ])
     );
 
@@ -117,7 +100,6 @@ export default function DetailModalMSE({ data, onClose }) {
                 <th className="p-2">Uraian</th>
                 <th className="p-2">Item</th>
                 <th className="p-2">Hasil Monitoring</th>
-                {comparison && <th className="p-2">Hasil Perbandingan</th>}
               </tr>
             </thead>
             <tbody>
@@ -129,11 +111,6 @@ export default function DetailModalMSE({ data, onClose }) {
                     <td className="p-2 border-r text-right">
                       {formatHasil(row.items[0]?.hasil)}
                     </td>
-                    {comparison && (
-                      <td className="p-2 text-right">
-                        {formatHasil(comparison[i]?.items[0]?.hasil)}
-                      </td>
-                    )}
                   </tr>
                 ) : (
                   row.items.map((item, idx) => (
@@ -151,11 +128,6 @@ export default function DetailModalMSE({ data, onClose }) {
                       <td className="p-2 border-r text-right">
                         {formatHasil(item.hasil)}
                       </td>
-                      {comparison && (
-                        <td className="p-2 text-right">
-                          {formatHasil(comparison[i]?.items[idx]?.hasil)}
-                        </td>
-                      )}
                     </tr>
                   ))
                 )

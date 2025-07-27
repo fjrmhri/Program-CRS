@@ -167,11 +167,6 @@ const MSEDocument = ({ data }) => {
             <Text style={[styles.tableColHeader, styles.col3]}>
               Hasil Monitoring
             </Text>
-            {comparison && (
-              <Text style={[styles.tableColHeader, styles.col3]}>
-                Pembanding
-              </Text>
-            )}
           </View>
 
           {monitoring.map((row, i) => {
@@ -199,11 +194,6 @@ const MSEDocument = ({ data }) => {
                 <Text style={[styles.tableCol, styles.col3]}>
                   {item.hasil || "-"}
                 </Text>
-                {comparison && (
-                  <Text style={[styles.tableCol, styles.col3]}>
-                    {comparison[i]?.items[j]?.hasil || "-"}
-                  </Text>
-                )}
               </View>
             ));
           })}

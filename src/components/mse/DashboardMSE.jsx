@@ -4,6 +4,8 @@ import { ref, onValue, remove } from "firebase/database";
 import FormModalMSE from "./FormModalMSE";
 import GrafikModalMSE from "./GrafikModalMSE";
 import groupBy from "lodash/groupBy";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 export default function DashboardMSE({ onAddForm, onView, onCompare }) {
   const [datasets, setDatasets] = useState([]);
@@ -43,7 +45,6 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
             });
           });
 
-          // Gabungkan data berdasarkan nama + usaha
           const grouped = groupBy(
             allData,
             (d) => `${d.meta?.nama || ""}-${d.meta?.usaha || ""}`
@@ -57,11 +58,11 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                   a.meta?.tanggal || new Date(a.createdAt).toISOString();
                 const bDate =
                   b.meta?.tanggal || new Date(b.createdAt).toISOString();
-                return bDate.localeCompare(aDate); // terbaru duluan
+                return bDate.localeCompare(aDate);
               });
 
-            const latest = sorted[0]; // bulan ini
-            const comparison = sorted[1] || null; // bulan lalu
+            const latest = sorted[0];
+            const comparison = sorted[1] || null;
 
             return {
               ...latest,
@@ -90,6 +91,58 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
         source === "User" ? `bookkeeping/${uidOrId}/${id}` : `mse/${id}`;
       remove(ref(db, path));
     }
+  };
+
+  const exportExcel = () => {
+    const rows = [];
+
+    datasets.forEach((data, index) => {
+      const meta = data.meta;
+      const base = {
+        No: index + 1,
+        Nama: meta?.nama || "-",
+        Usaha: meta?.usaha || "-",
+        Desa: meta?.desa || "-",
+        Tanggal: meta?.tanggal || "-",
+        Sumber: data.source === "Manual" ? "Admin" : "Pelaku",
+      };
+
+      data.monitoring?.forEach((mon) => {
+        mon.items?.forEach((item) => {
+          rows.push({
+            ...base,
+            Uraian: mon.uraian,
+            Item: item.nama,
+            Hasil: item.hasil,
+            Banding: "",
+          });
+        });
+      });
+
+      if (data.comparison) {
+        data.comparison.monitoring?.forEach((mon) => {
+          mon.items?.forEach((item) => {
+            rows.push({
+              ...base,
+              Uraian: mon.uraian,
+              Item: item.nama,
+              Hasil: "",
+              Banding: item.hasil,
+            });
+          });
+        });
+      }
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data MSE");
+
+    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, `DataMonitoringMSE.xlsx`);
   };
 
   const highlightMatch = (text = "", keyword = "") => {
@@ -138,6 +191,12 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
             >
               + Input Manual
             </button>
+            <button
+              onClick={exportExcel}
+              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+            >
+              📥 Ekspor Excel
+            </button>
           </div>
         </div>
 
@@ -175,7 +234,7 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                             : "bg-yellow-100 text-yellow-700"
                         }`}
                       >
-                        {d.source}
+                        {d.source === "Manual" ? "Admin" : "Pelaku"}
                       </span>
                     </td>
                     <td className="px-2 py-2">
@@ -186,21 +245,27 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                         >
                           Detail
                         </button>
-
-                        <button
-                          onClick={() => setChartData(d)}
-                          className="bg-purple-500 text-white px-3 py-1.5 rounded text-xs hover:bg-purple-600"
-                        >
-                          Grafik
-                        </button>
-
+                        {d.source === "User" ? (
+                          <button
+                            onClick={() => setChartData(d)}
+                            className="bg-purple-500 text-white px-3 py-1.5 rounded text-xs hover:bg-purple-600"
+                          >
+                            Grafik
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onCompare(d)}
+                            className="bg-yellow-500 text-white px-3 py-1.5 rounded text-xs hover:bg-yellow-600"
+                          >
+                            Banding
+                          </button>
+                        )}
                         <button
                           onClick={() => handleEdit(d)}
                           className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded text-xs hover:bg-gray-200"
                         >
                           Edit
                         </button>
-
                         <button
                           onClick={() =>
                             handleDelete(d.uid || d.id, d.id, d.source)
