@@ -11,10 +11,18 @@ import {
 } from "recharts";
 
 export default function GrafikModalMSE({ data, onClose }) {
-  const { meta, monitoring = [], comparison } = data;
+  const { meta, monitoring = [], comparison, comparisonDate } = data;
 
-  const prevMonitoring = comparison?.monitoring || [];
-  const prevMeta = comparison?.meta || {};
+  const prevMonitoring = Array.isArray(comparison)
+    ? comparison
+    : Array.isArray(comparison?.monitoring)
+    ? comparison.monitoring
+    : [];
+
+  const prevMeta = {
+    tanggal: comparisonDate || comparison?.meta?.tanggal || "Sebelumnya",
+    labaBersih: comparison?.meta?.labaBersih || meta?.labaBersih || "0",
+  };
 
   const cleanNum = (val) => {
     if (!val) return 0;

@@ -75,7 +75,16 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
             };
           });
 
-          setDatasets(merged);
+          // Urutkan hasil akhir berdasarkan tanggal terbaru
+          const finalSorted = merged.sort((a, b) => {
+            const aDate =
+              a.meta?.tanggal || new Date(a.createdAt).toISOString();
+            const bDate =
+              b.meta?.tanggal || new Date(b.createdAt).toISOString();
+            return bDate.localeCompare(aDate);
+          });
+
+          setDatasets(finalSorted);
         });
       });
     };
@@ -94,47 +103,108 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
   };
 
   const exportExcel = () => {
-    const rows = [];
+    const wsData = [
+      [
+        "No",
+        "Nama",
+        "Usaha",
+        "Desa",
+        "Tanggal",
+        "Sumber",
+        "Uraian",
+        "Item",
+        "Hasil",
+      ],
+    ];
+
+    const merges = [];
+    let rowOffset = 1;
 
     datasets.forEach((data, index) => {
-      const meta = data.meta;
-      const base = {
-        No: index + 1,
-        Nama: meta?.nama || "-",
-        Usaha: meta?.usaha || "-",
-        Desa: meta?.desa || "-",
-        Tanggal: meta?.tanggal || "-",
-        Sumber: data.source === "Manual" ? "Admin" : "Pelaku",
-      };
+      const meta = data.meta || {};
+      const monitoring = data.monitoring || [];
 
-      data.monitoring?.forEach((mon) => {
-        mon.items?.forEach((item) => {
-          rows.push({
-            ...base,
-            Uraian: mon.uraian,
-            Item: item.nama,
-            Hasil: item.hasil,
-            Banding: "",
-          });
+      const base = [
+        index + 1,
+        meta.nama || "-",
+        meta.usaha || "-",
+        meta.desa || "-",
+        meta.tanggal || "-",
+        data.source === "Manual" ? "Admin" : "Pelaku",
+      ];
+
+      const monitoringRows = [];
+
+      monitoring.forEach((mon) => {
+        const items = mon.items || [];
+
+        items.forEach((item, j) => {
+          monitoringRows.push([
+            "",
+            "",
+            "",
+            "",
+            "",
+            "", // base kosong (kita isi nanti hanya 1x)
+            j === 0 ? mon.uraian : "",
+            item.nama || "-",
+            item.hasil || "-",
+          ]);
         });
+
+        if (items.length > 1) {
+          merges.push({
+            s: { r: rowOffset, c: 6 },
+            e: { r: rowOffset + items.length - 1, c: 6 },
+          });
+        }
       });
 
-      if (data.comparison) {
-        data.comparison.monitoring?.forEach((mon) => {
-          mon.items?.forEach((item) => {
-            rows.push({
-              ...base,
-              Uraian: mon.uraian,
-              Item: item.nama,
-              Hasil: "",
-              Banding: item.hasil,
-            });
+      // Tambahkan base hanya di baris pertama
+      if (monitoringRows.length > 0) {
+        for (let i = 0; i < monitoringRows.length; i++) {
+          if (i === 0) {
+            wsData.push([...base, ...monitoringRows[i].slice(6)]);
+          } else {
+            wsData.push([
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ...monitoringRows[i].slice(6),
+            ]);
+          }
+        }
+
+        // Merge kolom No–Sumber
+        for (let col = 0; col <= 5; col++) {
+          merges.push({
+            s: { r: rowOffset, c: col },
+            e: { r: rowOffset + monitoringRows.length - 1, c: col },
           });
-        });
+        }
+
+        rowOffset += monitoringRows.length;
       }
     });
 
-    const ws = XLSX.utils.json_to_sheet(rows);
+    // Create worksheet and apply merges
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws["!merges"] = merges;
+
+    // Optional: Apply header styles if needed
+    const headerRow = ws["A1:E1"];
+    if (headerRow) {
+      for (let i = 0; i < 9; i++) {
+        ws[`A1`].s = {
+          fill: { fgColor: { rgb: "FFFF00" } }, // Example: Yellow background
+          font: { bold: true },
+        };
+      }
+    }
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Data MSE");
 
@@ -184,19 +254,21 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
               className="w-full px-3 py-2 text-sm border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-300"
             />
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              onClick={onAddForm}
-              className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
-            >
-              + Input Manual
-            </button>
-            <button
-              onClick={exportExcel}
-              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
-            >
-              📥 Ekspor Excel
-            </button>
+          <div className="flex flex-col sm:flex-row sm:justify-end w-full gap-2 sm:w-auto sm:flex-nowrap">
+            <div className="flex flex-row justify-between gap-2 w-full sm:w-auto">
+              <button
+                onClick={onAddForm}
+                className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 w-full sm:w-auto"
+              >
+                + Input Manual
+              </button>
+              <button
+                onClick={exportExcel}
+                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 w-full sm:w-auto"
+              >
+                📥 Ekspor Excel
+              </button>
+            </div>
           </div>
         </div>
 
@@ -245,6 +317,7 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                         >
                           Detail
                         </button>
+
                         {d.source === "User" ? (
                           <button
                             onClick={() => setChartData(d)}
@@ -253,19 +326,29 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                             Grafik
                           </button>
                         ) : (
-                          <button
-                            onClick={() => onCompare(d)}
-                            className="bg-yellow-500 text-white px-3 py-1.5 rounded text-xs hover:bg-yellow-600"
-                          >
-                            Banding
-                          </button>
+                          <>
+                            <button
+                              onClick={() => onCompare(d)}
+                              className="bg-yellow-500 text-white px-3 py-1.5 rounded text-xs hover:bg-yellow-600"
+                            >
+                              Banding
+                            </button>
+                            <button
+                              onClick={() => setChartData(d)}
+                              className="bg-purple-500 text-white px-3 py-1.5 rounded text-xs hover:bg-purple-600"
+                            >
+                              Grafik
+                            </button>
+                          </>
                         )}
+
                         <button
                           onClick={() => handleEdit(d)}
                           className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded text-xs hover:bg-gray-200"
                         >
                           Edit
                         </button>
+
                         <button
                           onClick={() =>
                             handleDelete(d.uid || d.id, d.id, d.source)
