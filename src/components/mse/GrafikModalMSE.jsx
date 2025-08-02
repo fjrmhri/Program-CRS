@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useRef } from "react";
 import {
   LineChart,
   Line,
@@ -14,22 +14,19 @@ import jsPDF from "jspdf";
 
 export default function GrafikModalMSE({ data, onClose }) {
   const chartRef = useRef();
-  const [selectedYear, setSelectedYear] = useState("semua");
 
-  const { meta, monitoring = [], comparison, comparisonDate } = data;
+  const { meta, monitoring = [], comparison } = data;
 
-  const allComparisons = Array.isArray(data.comparison)
-    ? data.comparison
-    : data.comparison && data.comparison.monitoring
+  const allComparisons = Array.isArray(comparison)
+    ? comparison
+    : comparison && comparison.monitoring
     ? [
         {
           meta: {
             tanggal:
-              data.comparisonDate ||
-              data.comparison?.meta?.tanggal ||
-              "Sebelumnya",
+              data.comparisonDate || comparison?.meta?.tanggal || "Sebelumnya",
           },
-          monitoring: data.comparison.monitoring,
+          monitoring: comparison.monitoring,
         },
       ]
     : [];
@@ -53,17 +50,15 @@ export default function GrafikModalMSE({ data, onClose }) {
   };
 
   const extractBiayaTotal = (mon) => {
-    if (!Array.isArray(mon)) return 0; // ← CEK DULU
+    if (!Array.isArray(mon)) return 0;
     const biaya = mon.find((m) => m.uraian === "Biaya operasional per bulan");
     if (!biaya) return 0;
-
     const totalItem =
       biaya.items.find((item) =>
         ["total", "biaya total", "total biaya"].includes(
           item.nama?.toLowerCase()
         )
       ) || biaya.items[0];
-
     return cleanNum(totalItem?.hasil);
   };
 
@@ -74,7 +69,7 @@ export default function GrafikModalMSE({ data, onClose }) {
     return target.items.reduce((sum, item) => sum + cleanNum(item?.hasil), 0);
   };
 
-  let chartData = allComparisons
+  const chartData = allComparisons
     .map(({ meta: m, monitoring: mon }) => {
       const omset = extractVal(mon, "Omset / penjualan per bulan");
       const biaya = extractBiayaTotal(mon);
@@ -91,16 +86,6 @@ export default function GrafikModalMSE({ data, onClose }) {
       };
     })
     .sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
-
-  const years = [
-    ...new Set(chartData.map((d) => new Date(d.tanggal).getFullYear())),
-  ];
-
-  if (selectedYear !== "semua") {
-    chartData = chartData.filter(
-      (d) => new Date(d.tanggal).getFullYear().toString() === selectedYear
-    );
-  }
 
   const formatCurrency = (val) =>
     new Intl.NumberFormat("id-ID", {
@@ -135,24 +120,6 @@ export default function GrafikModalMSE({ data, onClose }) {
         <h2 className="text-2xl font-bold text-center">
           Grafik Perbandingan MSE
         </h2>
-
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm">
-          <div>
-            <label className="block font-medium mb-1">Filter Tahun:</label>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              className="border px-2 py-1 rounded"
-            >
-              <option value="semua">Semua Tahun</option>
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
 
         <div ref={chartRef} className="w-full h-72 mt-4">
           <ResponsiveContainer width="100%" height="100%">
