@@ -62,14 +62,25 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
               });
 
             const latest = sorted[0];
-            const comparison = sorted[1] || null;
+
+            // jika data Manual dan punya comparison di dalamnya
+            const hasInlineComparison =
+              latest.source === "Manual" && latest.comparison;
 
             return {
               ...latest,
-              comparison: comparison
+              comparison: hasInlineComparison
                 ? {
-                    monitoring: comparison.monitoring,
-                    meta: comparison.meta,
+                    monitoring: latest.comparison,
+                    meta: {
+                      tanggal: latest.comparisonDate || "Sebelumnya",
+                      labaBersih: latest.meta?.labaBersih || "0",
+                    },
+                  }
+                : sorted[1]
+                ? {
+                    monitoring: sorted[1].monitoring,
+                    meta: sorted[1].meta,
                   }
                 : null,
             };

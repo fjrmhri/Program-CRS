@@ -6,7 +6,21 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import MSEDocument from "./MSEDocument";
 
 export default function DetailModalMSE({ data, onClose }) {
-  const { meta, monitoring = [] } = data;
+  // Fungsi pembanding tanggal
+  const getDate = (obj) =>
+    new Date(obj?.meta?.tanggal || obj?.comparisonDate || "1900-01-01");
+
+  const isComparisonNewer =
+    data?.comparison && getDate(data.comparison) > getDate(data);
+
+  // Gabungkan identitas lama + data terbaru jika comparison
+  const meta = isComparisonNewer
+    ? { ...data?.meta, ...(data?.comparison?.meta || {}) }
+    : data?.meta || {};
+
+  const monitoring = isComparisonNewer
+    ? data?.comparison?.monitoring || []
+    : data?.monitoring || [];
 
   const formatHasil = (val) => {
     if (!val || val === "-") return "-";
@@ -65,8 +79,15 @@ export default function DetailModalMSE({ data, onClose }) {
       margin: { left: 10, right: 10 },
     });
 
-    doc.save(`MSE_Monitoring_${meta.nama.replace(/\s+/g, "_")}.pdf`);
+    const safeFileName = (meta?.nama || "data")
+      .replace(/\s+/g, "_")
+      .replace(/[^\w\-]/g, "");
+    doc.save(`MSE_Monitoring_${safeFileName}.pdf`);
   };
+
+  const safeFileName = (meta?.nama || "data")
+    .replace(/\s+/g, "_")
+    .replace(/[^\w\-]/g, "");
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-center items-start pt-10 overflow-y-auto">
@@ -109,7 +130,7 @@ export default function DetailModalMSE({ data, onClose }) {
                     <td className="p-2 border-r">{row.uraian}</td>
                     <td className="p-2 border-r">Rp</td>
                     <td className="p-2 border-r text-right">
-                      {formatHasil(row.items[0]?.hasil)}
+                      {formatHasil(row.items?.[0]?.hasil)}
                     </td>
                   </tr>
                 ) : (
@@ -139,7 +160,7 @@ export default function DetailModalMSE({ data, onClose }) {
         <div className="flex flex-col sm:flex-row justify-between items-center pt-4 gap-2 sm:gap-0">
           <PDFDownloadLink
             document={<MSEDocument data={data} />}
-            fileName={`Template_MSE_${meta.nama.replace(/\s+/g, "_")}.pdf`}
+            fileName={`Template_MSE_${safeFileName}.pdf`}
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
           >
             📄 Ekspor PDF

@@ -42,7 +42,7 @@ export default function GrafikModalMSE({ data, onClose }) {
     return target.items.reduce((sum, item) => sum + cleanNum(item?.hasil), 0);
   };
 
-  const chartData = [
+  const chartDataUnsorted = [
     {
       name: prevMeta?.tanggal || "Sebelumnya",
       Omset: extractVal(prevMonitoring, "Omset / penjualan per bulan"),
@@ -54,6 +54,7 @@ export default function GrafikModalMSE({ data, onClose }) {
         "Jumlah tenaga kerja tidak tetap"
       ),
       Laba: cleanNum(prevMeta?.labaBersih),
+      tanggal: prevMeta?.tanggal || "1900-01-01",
     },
     {
       name: meta?.tanggal || "Bulan Ini",
@@ -66,8 +67,13 @@ export default function GrafikModalMSE({ data, onClose }) {
         "Jumlah tenaga kerja tidak tetap"
       ),
       Laba: cleanNum(meta?.labaBersih),
+      tanggal: meta?.tanggal || "1900-01-01",
     },
   ];
+
+  const chartData = chartDataUnsorted.sort(
+    (a, b) => new Date(a.tanggal) - new Date(b.tanggal)
+  );
 
   const formatCurrency = (val) =>
     new Intl.NumberFormat("id-ID", {
