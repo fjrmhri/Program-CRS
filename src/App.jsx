@@ -19,7 +19,7 @@ export default function App() {
   const [compareDataMSE, setCompareDataMSE] = useState(null);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 text-sm sm:text-base">
+    <div className="p-1 sm:p-2 md:p-4 bg-white shadow rounded">
       {}
       <header className="bg-white rounded-lg shadow-sm max-w-xl mx-auto mt-4 px-3 py-2 flex justify-around text-sm sm:text-base">
         <div className="text-center">

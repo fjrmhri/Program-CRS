@@ -90,9 +90,19 @@ export default function FormModalComparisonMSE({ data, onClose }) {
       })),
     }));
 
-    await update(ref(db, `mse/${data.id}`), {
-      comparison: formatted,
-      comparisonDate: tanggal,
+    const newEntry = {
+      meta: { tanggal },
+      monitoring: formatted,
+    };
+
+    const docRef = ref(db, `mse/${data.id}`);
+
+    await update(docRef, {
+      comparisonDate: tanggal, // untuk referensi data terbaru di DetailModal
+    });
+
+    await update(docRef, {
+      comparisonList: (data.comparisonList || []).concat(newEntry),
     });
 
     onClose();
@@ -170,7 +180,7 @@ export default function FormModalComparisonMSE({ data, onClose }) {
             </div>
           ))}
 
-          <div className="flex justify-end gap-3 pt-6">
+          <div className="flex flex-col md:flex-row justify-end gap-3 pt-4">
             <button
               type="submit"
               className="bg-yellow-500 text-white px-6 py-2 rounded hover:bg-yellow-600"

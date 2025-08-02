@@ -12,6 +12,7 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [editData, setEditData] = useState(null);
   const [chartData, setChartData] = useState(null);
+  const [refreshToggle, setRefreshToggle] = useState(false);
 
   useEffect(() => {
     const bookkeepingRef = ref(db, "bookkeeping");
@@ -28,7 +29,7 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
               ...value,
               id,
               uid,
-              source: "User",
+              source: "User ",
               createdAt: value.createdAt || 0,
             });
           });
@@ -62,10 +63,20 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
               });
 
             const latest = sorted[0];
-
-            // jika data Manual dan punya comparison di dalamnya
             const hasInlineComparison =
               latest.source === "Manual" && latest.comparison;
+
+            const comparisonDate = hasInlineComparison
+              ? latest.comparisonDate || latest.meta?.tanggal
+              : sorted[1]?.meta?.tanggal;
+
+            const latestDate = latest.meta?.tanggal || latest.createdAt;
+
+            const effectiveDate = comparisonDate
+              ? new Date(comparisonDate) > new Date(latestDate)
+                ? comparisonDate
+                : latestDate
+              : latestDate;
 
             return {
               ...latest,
@@ -73,7 +84,7 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                 ? {
                     monitoring: latest.comparison,
                     meta: {
-                      tanggal: latest.comparisonDate || "Sebelumnya",
+                      tanggal: comparisonDate || "Sebelumnya",
                       labaBersih: latest.meta?.labaBersih || "0",
                     },
                   }
@@ -83,16 +94,14 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                     meta: sorted[1].meta,
                   }
                 : null,
+              effectiveDate,
             };
           });
 
-          // Urutkan hasil akhir berdasarkan tanggal terbaru
           const finalSorted = merged.sort((a, b) => {
-            const aDate =
-              a.meta?.tanggal || new Date(a.createdAt).toISOString();
-            const bDate =
-              b.meta?.tanggal || new Date(b.createdAt).toISOString();
-            return bDate.localeCompare(aDate);
+            const aDate = new Date(a.effectiveDate);
+            const bDate = new Date(b.effectiveDate);
+            return bDate - aDate;
           });
 
           setDatasets(finalSorted);
@@ -101,19 +110,23 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
     };
 
     fetchData();
-  }, []);
+  }, [refreshToggle]);
 
   const handleEdit = (data) => setEditData(data);
 
   const handleDelete = (uidOrId, id, source = "bookkeeping") => {
     if (confirm("Yakin hapus data ini?")) {
       const path =
-        source === "User" ? `bookkeeping/${uidOrId}/${id}` : `mse/${id}`;
+        source === "User " ? `bookkeeping/${uidOrId}/${id}` : `mse/${id}`;
       remove(ref(db, path));
     }
   };
 
-  const exportExcel = () => {
+  const handleRefresh = () => {
+    setRefreshToggle((prev) => !prev);
+  };
+
+  const handleExport = () => {
     const wsData = [
       [
         "No",
@@ -156,7 +169,7 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
             "",
             "",
             "",
-            "", // base kosong (kita isi nanti hanya 1x)
+            "",
             j === 0 ? mon.uraian : "",
             item.nama || "-",
             item.hasil || "-",
@@ -171,7 +184,6 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
         }
       });
 
-      // Tambahkan base hanya di baris pertama
       if (monitoringRows.length > 0) {
         for (let i = 0; i < monitoringRows.length; i++) {
           if (i === 0) {
@@ -189,7 +201,6 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
           }
         }
 
-        // Merge kolom No–Sumber
         for (let col = 0; col <= 5; col++) {
           merges.push({
             s: { r: rowOffset, c: col },
@@ -201,20 +212,8 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
       }
     });
 
-    // Create worksheet and apply merges
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     ws["!merges"] = merges;
-
-    // Optional: Apply header styles if needed
-    const headerRow = ws["A1:E1"];
-    if (headerRow) {
-      for (let i = 0; i < 9; i++) {
-        ws[`A1`].s = {
-          fill: { fgColor: { rgb: "FFFF00" } }, // Example: Yellow background
-          font: { bold: true },
-        };
-      }
-    }
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Data MSE");
@@ -225,6 +224,13 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
     });
     saveAs(blob, `DataMonitoringMSE.xlsx`);
   };
+
+  const formatDate = (str) =>
+    new Date(str).toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
 
   const highlightMatch = (text = "", keyword = "") => {
     const regex = new RegExp(`(${keyword})`, "gi");
@@ -274,10 +280,16 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                 + Input Manual
               </button>
               <button
-                onClick={exportExcel}
+                onClick={handleExport}
                 className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 w-full sm:w-auto"
               >
                 📥 Ekspor Excel
+              </button>
+              <button
+                onClick={handleRefresh}
+                className="bg-gray-500 text-white px-2 py-2 rounded text-sm hover:bg-gray-600"
+              >
+                🔄
               </button>
             </div>
           </div>
@@ -287,7 +299,7 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
           <p className="text-gray-500 text-sm">Tidak ada data yang cocok.</p>
         ) : (
           <div className="overflow-x-auto w-full">
-            <table className="min-w-[560px] sm:min-w-[600px] w-full text-xs sm:text-sm border rounded">
+            <table className="min-w-[590px] sm:min-w-[600px] w-full text-xs sm:text-sm border rounded">
               <thead className="bg-gray-100">
                 <tr>
                   <th className="px-2 py-2 text-left">Nama UMKM</th>
@@ -301,7 +313,13 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                 {filteredDatasets.map((d) => (
                   <tr key={d.id} className="border-t">
                     <td className="px-2 py-2">
-                      {highlightMatch(d.meta?.nama, searchQuery)}
+                      <div className="flex flex-col">
+                        <span>{highlightMatch(d.meta?.nama, searchQuery)}</span>
+                        <span className="text-[10px] text-gray-500 italic">
+                          Terakhir Update:{" "}
+                          {formatDate(d.meta?.tanggal || d.createdAt)}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-2 py-2">
                       {highlightMatch(d.meta?.usaha, searchQuery)}
@@ -328,8 +346,7 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                         >
                           Detail
                         </button>
-
-                        {d.source === "User" ? (
+                        {d.source === "User " ? (
                           <button
                             onClick={() => setChartData(d)}
                             className="bg-purple-500 text-white px-3 py-1.5 rounded text-xs hover:bg-purple-600"
@@ -352,14 +369,12 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                             </button>
                           </>
                         )}
-
                         <button
                           onClick={() => handleEdit(d)}
                           className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded text-xs hover:bg-gray-200"
                         >
                           Edit
                         </button>
-
                         <button
                           onClick={() =>
                             handleDelete(d.uid || d.id, d.id, d.source)

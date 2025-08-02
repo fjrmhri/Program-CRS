@@ -6,20 +6,32 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import MSEDocument from "./MSEDocument";
 
 export default function DetailModalMSE({ data, onClose }) {
-  // Fungsi pembanding tanggal
-  const getDate = (obj) =>
-    new Date(obj?.meta?.tanggal || obj?.comparisonDate || "1900-01-01");
+  // Ambil data terbaru: bisa dari comparison[] atau data utama
+  const comparisons = Array.isArray(data.comparison)
+    ? data.comparison
+    : data.comparison?.monitoring
+    ? [data.comparison]
+    : [];
+
+  const latestComparison = comparisons
+    .filter((c) => c.meta?.tanggal || c.meta?.createdAt)
+    .sort(
+      (a, b) =>
+        new Date(b.meta?.tanggal || "1900-01-01") -
+        new Date(a.meta?.tanggal || "1900-01-01")
+    )[0];
 
   const isComparisonNewer =
-    data?.comparison && getDate(data.comparison) > getDate(data);
+    latestComparison &&
+    new Date(latestComparison.meta?.tanggal || "1900-01-01") >
+      new Date(data?.meta?.tanggal || "1900-01-01");
 
-  // Gabungkan identitas lama + data terbaru jika comparison
   const meta = isComparisonNewer
-    ? { ...data?.meta, ...(data?.comparison?.meta || {}) }
+    ? { ...data?.meta, ...latestComparison.meta }
     : data?.meta || {};
 
   const monitoring = isComparisonNewer
-    ? data?.comparison?.monitoring || []
+    ? latestComparison.monitoring || []
     : data?.monitoring || [];
 
   const formatHasil = (val) => {
