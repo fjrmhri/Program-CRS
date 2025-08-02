@@ -6,7 +6,6 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import MSEDocument from "./MSEDocument";
 
 export default function DetailModalMSE({ data, onClose }) {
-  // Ambil data terbaru: bisa dari comparison[] atau data utama
   const comparisons = Array.isArray(data.comparison)
     ? data.comparison
     : data.comparison?.monitoring
@@ -36,7 +35,11 @@ export default function DetailModalMSE({ data, onClose }) {
 
   const formatHasil = (val) => {
     if (!val || val === "-") return "-";
-    return val.toString();
+    const number = parseFloat(val.toString().replace(/[^\d.-]/g, ""));
+    if (isNaN(number)) return val;
+    return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(
+      number
+    );
   };
 
   const handleExportPDF = async () => {

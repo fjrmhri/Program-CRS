@@ -54,14 +54,21 @@ export default function GrafikModalMSE({ data, onClose }) {
 
   const extractBiayaTotal = (mon) => {
     const biaya = mon.find((m) => m.uraian === "Biaya operasional per bulan");
-    if (!biaya) return 0;
-    const totalItem =
-      biaya.items.find((item) =>
-        ["Total", "Biaya total", "Total biaya"].includes(
-          item.nama?.toLowerCase()
-        )
-      ) || biaya.items[0];
-    return cleanNum(totalItem?.hasil);
+    if (!biaya || !biaya.items) return 0;
+
+    const totalItem = biaya.items.find((item) => {
+      const name = item.nama?.toLowerCase();
+      return (
+        name?.includes("total") || name?.includes("biaya") || name === "total"
+      );
+    });
+
+    const sumFallback = biaya.items.reduce(
+      (sum, item) => sum + cleanNum(item?.hasil),
+      0
+    );
+
+    return cleanNum(totalItem?.hasil) || sumFallback || 0;
   };
 
   const sumTenaga = (mon, uraian) => {
