@@ -53,22 +53,18 @@ export default function GrafikModalMSE({ data, onClose }) {
   };
 
   const extractBiayaTotal = (mon) => {
+    if (!Array.isArray(mon)) return 0; // ← CEK DULU
     const biaya = mon.find((m) => m.uraian === "Biaya operasional per bulan");
-    if (!biaya || !biaya.items) return 0;
+    if (!biaya) return 0;
 
-    const totalItem = biaya.items.find((item) => {
-      const name = item.nama?.toLowerCase();
-      return (
-        name?.includes("total") || name?.includes("biaya") || name === "total"
-      );
-    });
+    const totalItem =
+      biaya.items.find((item) =>
+        ["total", "biaya total", "total biaya"].includes(
+          item.nama?.toLowerCase()
+        )
+      ) || biaya.items[0];
 
-    const sumFallback = biaya.items.reduce(
-      (sum, item) => sum + cleanNum(item?.hasil),
-      0
-    );
-
-    return cleanNum(totalItem?.hasil) || sumFallback || 0;
+    return cleanNum(totalItem?.hasil);
   };
 
   const sumTenaga = (mon, uraian) => {
@@ -237,18 +233,8 @@ export default function GrafikModalMSE({ data, onClose }) {
                   <td className="p-2 border font-medium">{key}</td>
                   {chartData.map((entry, idx) => {
                     const val = entry[key];
-                    const isMaxLaba = key === "Laba" && val === maxLaba;
-                    const isMinBiaya = key === "Biaya" && val === minBiaya;
-                    const isMaxOmset = key === "Omset" && val === maxOmset;
                     return (
-                      <td
-                        key={idx}
-                        className={`p-2 border ${
-                          isMaxLaba || isMinBiaya || isMaxOmset
-                            ? "bg-yellow-100 font-bold"
-                            : ""
-                        }`}
-                      >
+                      <td key={idx} className="p-2 border">
                         {isNaN(val)
                           ? "-"
                           : key.includes("Tenaga")

@@ -114,51 +114,12 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
 
   const handleEdit = (data) => setEditData(data);
 
-  const handleDelete = async (
-    uidOrId,
-    id,
-    source = "bookkeeping",
-    meta = {}
-  ) => {
-    if (!confirm("Yakin ingin menghapus SEMUA data UMKM ini?")) return;
-
-    const { nama, usaha } = meta;
-
-    const toDelete = [];
-
-    const bookkeepingSnap = await new Promise((resolve) =>
-      onValue(ref(db, "bookkeeping"), resolve, { onlyOnce: true })
-    );
-
-    const mseSnap = await new Promise((resolve) =>
-      onValue(ref(db, "mse"), resolve, { onlyOnce: true })
-    );
-
-    const bookkeepingData = bookkeepingSnap.val() || {};
-    const mseData = mseSnap.val() || {};
-
-    // Cari di bookkeeping
-    Object.entries(bookkeepingData).forEach(([uid, entries]) => {
-      Object.entries(entries).forEach(([entryId, entryVal]) => {
-        if (entryVal.meta?.nama === nama && entryVal.meta?.usaha === usaha) {
-          toDelete.push(ref(db, `bookkeeping/${uid}/${entryId}`));
-        }
-      });
-    });
-
-    // Cari di mse
-    Object.entries(mseData).forEach(([entryId, entryVal]) => {
-      if (entryVal.meta?.nama === nama && entryVal.meta?.usaha === usaha) {
-        toDelete.push(ref(db, `mse/${entryId}`));
-      }
-    });
-
-    // Hapus semua
-    const deletePromises = toDelete.map((r) => remove(r));
-    await Promise.all(deletePromises);
-
-    alert("Semua data berhasil dihapus.");
-    handleRefresh(); // trigger refresh setelah penghapusan
+  const handleDelete = (uidOrId, id, source = "bookkeeping") => {
+    if (confirm("Yakin hapus data ini?")) {
+      const path =
+        source === "User " ? `bookkeeping/${uidOrId}/${id}` : `mse/${id}`;
+      remove(ref(db, path));
+    }
   };
 
   const handleRefresh = () => {
@@ -416,7 +377,7 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                         </button>
                         <button
                           onClick={() =>
-                            handleDelete(d.uid || d.id, d.id, d.source, d.meta)
+                            handleDelete(d.uid || d.id, d.id, d.source)
                           }
                           className="bg-red-50 text-red-600 px-3 py-1.5 rounded text-xs hover:bg-red-100"
                         >
