@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { db } from "../../firebase";
 import { ref, onValue, remove } from "firebase/database";
 import FormModalMSE from "./FormModalMSE";
@@ -14,103 +14,196 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
   const [chartData, setChartData] = useState(null);
   const [refreshToggle, setRefreshToggle] = useState(false);
 
-  useEffect(() => {
+  const normalizeKey = (str) => (str || "").toString().trim().toLowerCase();
+
+  const fetchAll = useCallback(() => {
     const bookkeepingRef = ref(db, "bookkeeping");
     const mseRef = ref(db, "mse");
 
-    const fetchData = () => {
-      const allData = [];
+    const allData = [];
 
-      onValue(bookkeepingRef, (snapshot) => {
-        const data = snapshot.val() || {};
-        Object.entries(data).forEach(([uid, entries]) => {
-          Object.entries(entries).forEach(([id, value]) => {
-            allData.push({
-              ...value,
-              id,
-              uid,
-              source: "User ",
-              createdAt: value.createdAt || 0,
-            });
+    onValue(bookkeepingRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      Object.entries(data).forEach(([uid, entries]) => {
+        if (typeof entries !== "object") return;
+        Object.entries(entries).forEach(([id, value]) => {
+          allData.push({
+            ...value,
+            id,
+            uid,
+            source: "User",
+            createdAt: value.createdAt || 0,
           });
-        });
-
-        onValue(mseRef, (snap2) => {
-          const data2 = snap2.val() || {};
-          Object.entries(data2).forEach(([id, val]) => {
-            allData.push({
-              ...val,
-              id,
-              source: "Manual",
-              createdAt: val.createdAt || 0,
-            });
-          });
-
-          const grouped = groupBy(
-            allData,
-            (d) => `${d.meta?.nama || ""}-${d.meta?.usaha || ""}`
-          );
-
-          const merged = Object.values(grouped).map((items) => {
-            const sorted = items
-              .filter((item) => item.meta?.tanggal || item.createdAt)
-              .sort((a, b) => {
-                const aDate =
-                  a.meta?.tanggal || new Date(a.createdAt).toISOString();
-                const bDate =
-                  b.meta?.tanggal || new Date(b.createdAt).toISOString();
-                return bDate.localeCompare(aDate);
-              });
-
-            const latest = sorted[0];
-            const hasInlineComparison =
-              latest.source === "Manual" && latest.comparison;
-
-            const comparisonDate = hasInlineComparison
-              ? latest.comparisonDate || latest.meta?.tanggal
-              : sorted[1]?.meta?.tanggal;
-
-            const latestDate = latest.meta?.tanggal || latest.createdAt;
-
-            const effectiveDate = comparisonDate
-              ? new Date(comparisonDate) > new Date(latestDate)
-                ? comparisonDate
-                : latestDate
-              : latestDate;
-
-            return {
-              ...latest,
-              comparison: hasInlineComparison
-                ? {
-                    monitoring: latest.comparison,
-                    meta: {
-                      tanggal: comparisonDate || "Sebelumnya",
-                      labaBersih: latest.meta?.labaBersih || "0",
-                    },
-                  }
-                : sorted[1]
-                ? {
-                    monitoring: sorted[1].monitoring,
-                    meta: sorted[1].meta,
-                  }
-                : null,
-              effectiveDate,
-            };
-          });
-
-          const finalSorted = merged.sort((a, b) => {
-            const aDate = new Date(a.effectiveDate);
-            const bDate = new Date(b.effectiveDate);
-            return bDate - aDate;
-          });
-
-          setDatasets(finalSorted);
         });
       });
-    };
 
-    fetchData();
-  }, [refreshToggle]);
+      onValue(mseRef, (snap2) => {
+        const data2 = snap2.val() || {};
+        Object.entries(data2).forEach(([id, val]) => {
+          allData.push({
+            ...val,
+            id,
+            source: "Manual",
+            createdAt: val.createdAt || 0,
+          });
+        });
+
+        // Group by identity (nama-usaha) and merge to latest + comparison logic
+        const grouped = groupBy(
+          allData,
+          (d) =>
+            `${(d.meta?.nama || "").toString().toLowerCase()}|${(
+              d.meta?.usaha || ""
+            )
+              .toString()
+              .toLowerCase()}`
+        );
+
+        const merged = Object.values(grouped).map((items) => {
+          // Keep only entries with at least a date or createdAt
+          const valid = items.filter(
+            (item) => item.meta?.tanggal || item.createdAt
+          );
+
+          // Sort by newest effective timestamp: compare combination of comparisonDate (if newer) and own date
+          const computePrimaryDate = (item) => {
+            const ownDate =
+              item.meta?.tanggal || new Date(item.createdAt).toISOString();
+            // if item has comparisonList (array) or comparison, consider its comparisonDate if newer
+            let compDate = null;
+            if (
+              Array.isArray(item.comparisonList) &&
+              item.comparisonList.length
+            ) {
+              // take the most recent comparisonList meta.tanggal among them
+              const dates = item.comparisonList
+                .map((c) => c.meta?.tanggal)
+                .filter(Boolean)
+                .map((d) => {
+                  // normalize dd-mm-yyyy style
+                  if (/^\d{2}-\d{2}-\d{4}$/.test(d)) {
+                    const [dd, mm, yyyy] = d.split("-");
+                    return `${yyyy}-${mm}-${dd}`;
+                  }
+                  return d;
+                });
+              if (dates.length) {
+                compDate = dates.sort((a, b) => new Date(b) - new Date(a))[0];
+              }
+            } else if (item.comparison) {
+              compDate = item.comparisonDate || item.comparison?.meta?.tanggal;
+            }
+            // choose the later between compDate and ownDate
+            if (compDate) {
+              const cd = new Date(compDate);
+              const od = new Date(ownDate);
+              return cd > od ? compDate : ownDate;
+            }
+            return ownDate;
+          };
+
+          // sort so that latest (by effective) is first
+          const sorted = valid
+            .slice()
+            .sort(
+              (a, b) =>
+                new Date(computePrimaryDate(b)) -
+                new Date(computePrimaryDate(a))
+            );
+
+          const latest = sorted[0];
+          const prev = sorted[1] || null;
+
+          // Determine comparison object to pass into merged: support comparisonList, comparison, or fallback prev
+          let comparison = null;
+          // priority: if latest has comparisonList (array) use that as comparison entries
+          if (
+            Array.isArray(latest.comparisonList) &&
+            latest.comparisonList.length
+          ) {
+            comparison = {
+              comparisonList: latest.comparisonList.map((c) => ({
+                monitoring: c.monitoring,
+                meta: c.meta,
+              })),
+              metaFromComparison: null, // not used downstream
+            };
+          } else if (latest.source === "Manual" && latest.comparison) {
+            comparison = {
+              monitoring: latest.comparison,
+              meta: latest.comparisonDate
+                ? { tanggal: latest.comparisonDate }
+                : latest.comparison?.meta || {},
+            };
+          } else if (prev) {
+            comparison = {
+              monitoring: prev.monitoring,
+              meta: prev.meta,
+            };
+          }
+
+          // compute effectiveDate: if comparison has tanggal and is newer, use it; else latest's own
+          const latestDate = latest.meta?.tanggal || latest.createdAt;
+          let comparisonDate = null;
+          if (comparison) {
+            if (comparison.comparisonList) {
+              // take latest date from list
+              const dates = comparison.comparisonList
+                .map((c) => c.meta?.tanggal)
+                .filter(Boolean)
+                .map((d) => {
+                  if (/^\d{2}-\d{2}-\d{4}$/.test(d)) {
+                    const [dd, mm, yyyy] = d.split("-");
+                    return `${yyyy}-${mm}-${dd}`;
+                  }
+                  return d;
+                });
+              if (dates.length)
+                comparisonDate = dates.sort(
+                  (a, b) => new Date(b) - new Date(a)
+                )[0];
+            } else if (comparison.meta?.tanggal) {
+              comparisonDate = comparison.meta.tanggal;
+            }
+          }
+          let effectiveDate = latestDate;
+          if (comparisonDate) {
+            const ld = new Date(latestDate);
+            const cd = new Date(comparisonDate);
+            effectiveDate = cd > ld ? comparisonDate : latestDate;
+          }
+
+          // Normalize structure so consuming code downstream works same as before
+          const result = {
+            ...latest,
+            effectiveDate,
+          };
+
+          if (comparison) {
+            if (comparison.comparisonList) {
+              result.comparisonList = comparison.comparisonList;
+            } else if (comparison.monitoring) {
+              result.comparison = comparison.monitoring;
+              result.comparisonDate = comparison.meta?.tanggal;
+            }
+          } else {
+            result.comparison = null;
+          }
+
+          return result;
+        });
+
+        const finalSorted = merged.sort(
+          (a, b) => new Date(b.effectiveDate) - new Date(a.effectiveDate)
+        );
+        setDatasets(finalSorted);
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll, refreshToggle]);
 
   const handleEdit = (data) => setEditData(data);
 
@@ -123,13 +216,11 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
     if (!confirm("Yakin ingin menghapus SEMUA data UMKM ini?")) return;
 
     const { nama, usaha } = meta;
-
     const toDelete = [];
 
     const bookkeepingSnap = await new Promise((resolve) =>
       onValue(ref(db, "bookkeeping"), resolve, { onlyOnce: true })
     );
-
     const mseSnap = await new Promise((resolve) =>
       onValue(ref(db, "mse"), resolve, { onlyOnce: true })
     );
@@ -137,8 +228,8 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
     const bookkeepingData = bookkeepingSnap.val() || {};
     const mseData = mseSnap.val() || {};
 
-    // Cari di bookkeeping
     Object.entries(bookkeepingData).forEach(([uid, entries]) => {
+      if (typeof entries !== "object") return;
       Object.entries(entries).forEach(([entryId, entryVal]) => {
         if (entryVal.meta?.nama === nama && entryVal.meta?.usaha === usaha) {
           toDelete.push(ref(db, `bookkeeping/${uid}/${entryId}`));
@@ -146,23 +237,120 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
       });
     });
 
-    // Cari di mse
     Object.entries(mseData).forEach(([entryId, entryVal]) => {
       if (entryVal.meta?.nama === nama && entryVal.meta?.usaha === usaha) {
         toDelete.push(ref(db, `mse/${entryId}`));
       }
     });
 
-    // Hapus semua
     const deletePromises = toDelete.map((r) => remove(r));
     await Promise.all(deletePromises);
 
     alert("Semua data berhasil dihapus.");
-    handleRefresh(); // trigger refresh setelah penghapusan
+    handleRefresh();
   };
 
   const handleRefresh = () => {
     setRefreshToggle((prev) => !prev);
+  };
+
+  const handleCompare = (d) => {
+    const comparisonList = datasets
+      .filter(
+        (entry) =>
+          normalizeKey(entry.meta?.nama) === normalizeKey(d.meta?.nama) &&
+          normalizeKey(entry.meta?.usaha) === normalizeKey(d.meta?.usaha)
+      )
+      .map((e) => ({
+        monitoring: e.monitoring,
+        meta: e.meta,
+        uid: e.uid,
+      }));
+    onCompare({
+      ...d,
+      comparisonList,
+      datasets,
+    });
+  };
+  // Tambahkan ini di atas fungsi handleShowChart
+  const normalizeDate = (str) => {
+    if (!str) return null;
+    const cleaned = str.toString().trim();
+    if (/^\d{2}-\d{2}-\d{4}$/.test(cleaned)) {
+      const [d, m, y] = cleaned.split("-");
+      return `${y}-${m}-${d}`;
+    }
+    return cleaned;
+  };
+
+  const handleShowChart = (d) => {
+    // Normalisasi format tanggal ke yyyy-mm-dd
+    const normalizeDate = (str) => {
+      if (!str) return null;
+      const cleaned = str.toString().trim();
+      if (/^\d{2}-\d{2}-\d{4}$/.test(cleaned)) {
+        const [dd, mm, yyyy] = cleaned.split("-");
+        return `${yyyy}-${mm}-${dd}`;
+      }
+      return cleaned;
+    };
+
+    let comparisonList = [];
+
+    if (d.source === "Manual") {
+      // Ambil semua dari comparisonList jika ada
+      if (Array.isArray(d.comparisonList)) {
+        comparisonList.push(
+          ...d.comparisonList.map((c) => ({
+            monitoring: c.monitoring,
+            meta: c.meta,
+            uid: c.uid,
+          }))
+        );
+      }
+
+      // Data utama
+      comparisonList.push({
+        monitoring: d.monitoring,
+        meta: d.meta,
+        uid: d.uid,
+      });
+
+      // Jika ada comparison tunggal
+      if (d.comparison && d.comparison.meta?.tanggal) {
+        comparisonList.push({
+          monitoring: d.comparison,
+          meta: d.comparison.meta,
+          uid: d.uid,
+        });
+      }
+    } else {
+      // Sumber Pelaku: ambil semua dari datasets dengan nama & usaha sama
+      comparisonList = datasets
+        .filter(
+          (entry) =>
+            normalizeKey(entry.meta?.nama) === normalizeKey(d.meta?.nama) &&
+            normalizeKey(entry.meta?.usaha) === normalizeKey(d.meta?.usaha)
+        )
+        .map((e) => ({
+          monitoring: e.monitoring,
+          meta: e.meta,
+          uid: e.uid,
+        }));
+    }
+
+    // Urutkan berdasarkan tanggal lama → baru
+    comparisonList.sort((a, b) => {
+      const dateA = new Date(normalizeDate(a.meta?.tanggal));
+      const dateB = new Date(normalizeDate(b.meta?.tanggal));
+      return dateA - dateB;
+    });
+
+    setChartData({
+      ...d,
+      comparisonList,
+      datasets,
+    });
   };
 
   const handleExport = () => {
@@ -183,9 +371,9 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
     const merges = [];
     let rowOffset = 1;
 
-    datasets.forEach((data, index) => {
-      const meta = data.meta || {};
-      const monitoring = data.monitoring || [];
+    datasets.forEach((dataEntry, index) => {
+      const meta = dataEntry.meta || {};
+      const monitoring = dataEntry.monitoring || [];
 
       const base = [
         index + 1,
@@ -193,14 +381,13 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
         meta.usaha || "-",
         meta.desa || "-",
         meta.tanggal || "-",
-        data.source === "Manual" ? "Admin" : "Pelaku",
+        dataEntry.source === "Manual" ? "Admin" : "Pelaku",
       ];
 
       const monitoringRows = [];
 
       monitoring.forEach((mon) => {
         const items = mon.items || [];
-
         items.forEach((item, j) => {
           monitoringRows.push([
             "",
@@ -356,7 +543,9 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                         <span>{highlightMatch(d.meta?.nama, searchQuery)}</span>
                         <span className="text-[10px] text-gray-500 italic">
                           Terakhir Update:{" "}
-                          {formatDate(d.meta?.tanggal || d.createdAt)}
+                          {formatDate(
+                            d.effectiveDate || d.meta?.tanggal || d.createdAt
+                          )}
                         </span>
                       </div>
                     </td>
@@ -385,9 +574,9 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                         >
                           Detail
                         </button>
-                        {d.source === "User " ? (
+                        {d.source === "User" ? (
                           <button
-                            onClick={() => setChartData(d)}
+                            onClick={() => handleShowChart(d)}
                             className="bg-purple-500 text-white px-3 py-1.5 rounded text-xs hover:bg-purple-600"
                           >
                             Grafik
@@ -395,13 +584,13 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                         ) : (
                           <>
                             <button
-                              onClick={() => onCompare(d)}
+                              onClick={() => handleCompare(d)}
                               className="bg-yellow-500 text-white px-3 py-1.5 rounded text-xs hover:bg-yellow-600"
                             >
                               Banding
                             </button>
                             <button
-                              onClick={() => setChartData(d)}
+                              onClick={() => handleShowChart(d)}
                               className="bg-purple-500 text-white px-3 py-1.5 rounded text-xs hover:bg-purple-600"
                             >
                               Grafik

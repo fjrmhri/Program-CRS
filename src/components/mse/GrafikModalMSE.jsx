@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   LineChart,
   Line,
@@ -11,117 +11,211 @@ import {
 } from "recharts";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { ref, get } from "firebase/database";
+import { db } from "../../firebase";
 
 export default function GrafikModalMSE({ data, onClose }) {
   const chartRef = useRef();
+  const { meta, monitoring = [], comparisonList = [], uid, source } = data;
+  const [bookkeepingFallback, setBookkeepingFallback] = useState(null);
 
-  const { meta, monitoring = [], comparison } = data;
+  useEffect(() => {
+    if (!uid) return;
+    get(ref(db, `bookkeeping/${uid}`))
+      .then((snap) => setBookkeepingFallback(snap.val() || {}))
+      .catch(console.error);
+  }, [uid]);
 
-  const allComparisons = Array.isArray(comparison)
-    ? comparison
-    : comparison && comparison.monitoring
-    ? [
-        {
-          meta: {
-            tanggal:
-              data.comparisonDate || comparison?.meta?.tanggal || "Sebelumnya",
-          },
-          monitoring: comparison.monitoring,
-        },
-      ]
-    : [];
-
-  allComparisons.push({
-    meta: {
-      tanggal: meta?.tanggal || "Bulan Ini",
-    },
-    monitoring,
-  });
-
-  const cleanNum = (val) => {
-    if (!val) return 0;
-    return parseFloat(val.toString().replace(/[^\d.-]/g, "")) || 0;
+  const normalizeDate = (str) => {
+    if (!str) return null;
+    const cleaned = str.toString().trim();
+    if (/^\d{2}-\d{2}-\d{4}$/.test(cleaned)) {
+      const [d, m, y] = cleaned.split("-");
+      return `${y}-${m}-${d}`;
+    }
+    return cleaned;
   };
 
-  const extractVal = (mon, uraian) => {
-    if (!Array.isArray(mon)) return 0;
-    const target = mon.find((m) => m.uraian === uraian);
-    return cleanNum(target?.items?.[0]?.hasil);
+  const normalizeKey = (str) => (str || "").toString().trim().toLowerCase();
+  const matchesIdentity = (m2) =>
+    normalizeKey(m2?.nama) === normalizeKey(meta?.nama) &&
+    normalizeKey(m2?.usaha) === normalizeKey(meta?.usaha);
+
+  const gatherComparisons = () => {
+    const raw = [];
+
+    // Data utama
+    if (meta?.tanggal) {
+      raw.push({
+        meta,
+        monitoring,
+        source: "current",
+      });
+    }
+
+    // Admin - semua dari comparisonList
+    if (source === "Manual" && Array.isArray(comparisonList)) {
+      comparisonList.forEach((cmp) => {
+        if (cmp?.meta?.tanggal) {
+          raw.push({
+            meta: cmp.meta,
+            monitoring: cmp.monitoring,
+            source: "comparisonList",
+          });
+        }
+      });
+    }
+
+    // Pelaku - dari datasets + bookkeeping
+    if (source === "User") {
+      (data.datasets || []).forEach((e) => {
+        if (matchesIdentity(e.meta) && e.meta?.tanggal) {
+          raw.push({
+            meta: e.meta,
+            monitoring: e.monitoring,
+            source: "datasets",
+          });
+        }
+      });
+
+      let countBk = 0;
+      if (data.bookkeeping) {
+        Object.values(data.bookkeeping).forEach((perUser) => {
+          Object.values(perUser).forEach((entry) => {
+            if (matchesIdentity(entry.meta) && entry.meta?.tanggal) {
+              raw.push({
+                meta: entry.meta,
+                monitoring: entry.monitoring,
+                source: "bookkeeping(prop)",
+              });
+              countBk++;
+            }
+          });
+        });
+      }
+
+      if (countBk === 0 && bookkeepingFallback) {
+        Object.values(bookkeepingFallback).forEach((entry) => {
+          if (matchesIdentity(entry.meta) && entry.meta?.tanggal) {
+            raw.push({
+              meta: entry.meta,
+              monitoring: entry.monitoring,
+              source: "bookkeeping(fb)",
+            });
+          }
+        });
+      }
+    }
+
+    // Urutkan lama → baru
+    raw.sort(
+      (a, b) =>
+        new Date(normalizeDate(a.meta.tanggal)) -
+        new Date(normalizeDate(b.meta.tanggal))
+    );
+
+    // Hapus entri tanpa tanggal & duplikat tanggal
+    const seenDates = new Set();
+    return raw.filter((e) => {
+      if (!e.meta?.tanggal) return false;
+      const normDate = normalizeDate(e.meta.tanggal);
+      if (!normDate) return false;
+      if (seenDates.has(normDate)) return false;
+      seenDates.add(normDate);
+      return true;
+    });
   };
 
-  const extractBiayaTotal = (mon) => {
-    if (!Array.isArray(mon)) return 0;
-    const biaya = mon.find((m) => m.uraian === "Biaya operasional per bulan");
-    if (!biaya) return 0;
-    const totalItem =
-      biaya.items.find((item) =>
-        ["total", "biaya total", "total biaya"].includes(
-          item.nama?.toLowerCase()
-        )
-      ) || biaya.items[0];
-    return cleanNum(totalItem?.hasil);
+  const allComparisons = gatherComparisons();
+
+  const clean = (v) => {
+    const n = parseFloat((v || "").toString().replace(/[^\d.-]/g, ""));
+    return isNaN(n) ? 0 : n;
   };
 
-  const sumTenaga = (mon, uraian) => {
-    if (!Array.isArray(mon)) return 0;
-    const target = mon.find((m) => m.uraian === uraian);
-    if (!target) return 0;
-    return target.items.reduce((sum, item) => sum + cleanNum(item?.hasil), 0);
-  };
+  const extract = (mon, u) =>
+    clean(mon.find((m) => m.uraian === u)?.items?.[0]?.hasil);
 
-  const chartData = allComparisons
+  const extractBiaya = (mon) =>
+    mon
+      .find((m) => m.uraian === "Biaya operasional per bulan")
+      ?.items?.reduce((s, i) => s + clean(i.hasil), 0) || 0;
+
+  const sumTenaga = (mon, u) =>
+    mon
+      .find((m) => m.uraian === u)
+      ?.items?.reduce((s, i) => s + clean(i.hasil), 0) || 0;
+
+  const mapped = allComparisons
     .map(({ meta: m, monitoring: mon }) => {
-      const omset = extractVal(mon, "Omset / penjualan per bulan");
-      const biaya = extractBiayaTotal(mon);
-
+      const raw = m.tanggal;
+      const norm = normalizeDate(raw);
+      const om = extract(mon, "Omset / penjualan per bulan");
+      const bi = extractBiaya(mon);
       return {
-        name: m.tanggal || "Tanpa Tanggal",
-        Omset: omset,
-        Biaya: biaya,
-        Produksi: extractVal(mon, "Jumlah produksi per bulan"),
+        rawTanggal: raw,
+        normalized: norm,
+        Omset: om,
+        Biaya: bi,
+        Produksi: extract(mon, "Jumlah produksi per bulan"),
         TenagaTetap: sumTenaga(mon, "Jumlah tenaga kerja tetap"),
         TenagaTidakTetap: sumTenaga(mon, "Jumlah tenaga kerja tidak tetap"),
-        Laba: omset - biaya,
-        tanggal: m.tanggal || "1900-01-01",
+        Laba: om - bi,
       };
     })
-    .sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+    .filter((e) => e.normalized)
+    .sort((a, b) => new Date(a.normalized) - new Date(b.normalized));
 
-  const formatCurrency = (val) =>
+  // Ambil data terbaik per tanggal
+  const byDate = {};
+  const score = (e) => e.Omset * 10000 + e.Produksi * 100 + e.Laba;
+  mapped.forEach((e) => {
+    const k = e.normalized;
+    if (!byDate[k] || score(e) > score(byDate[k])) byDate[k] = e;
+  });
+
+  const chartData = Object.values(byDate)
+    .sort((a, b) => new Date(a.normalized) - new Date(b.normalized))
+    .map((e) => ({
+      name: e.rawTanggal,
+      Omset: e.Omset,
+      Biaya: e.Biaya,
+      Produksi: e.Produksi,
+      TenagaTetap: e.TenagaTetap,
+      TenagaTidakTetap: e.TenagaTidakTetap,
+      Laba: e.Laba,
+    }));
+
+  const fmt = (v) =>
     new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       maximumFractionDigits: 0,
-    }).format(val);
+    }).format(v);
 
-  const maxLaba = Math.max(...chartData.map((d) => d.Laba));
-  const minBiaya = Math.min(...chartData.map((d) => d.Biaya));
-  const maxOmset = Math.max(...chartData.map((d) => d.Omset));
-
-  const handleExportImage = async () => {
+  const exportImage = async () => {
     const canvas = await html2canvas(chartRef.current);
-    const link = document.createElement("a");
-    link.download = `grafik_mse_${Date.now()}.png`;
-    link.href = canvas.toDataURL();
-    link.click();
+    const a = document.createElement("a");
+    a.download = `grafik_${Date.now()}.png`;
+    a.href = canvas.toDataURL();
+    a.click();
   };
 
-  const handleExportPDF = async () => {
+  const exportPDF = async () => {
     const canvas = await html2canvas(chartRef.current);
-    const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF("landscape");
-    pdf.addImage(imgData, "PNG", 10, 10, 280, 150);
-    pdf.save(`grafik_mse_${Date.now()}.pdf`);
+    pdf.addImage(canvas.toDataURL(), "PNG", 10, 10, 280, 150);
+    pdf.save(`grafik_${Date.now()}.pdf`);
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-center items-start pt-10 overflow-y-auto">
-      <div className="bg-white p-6 rounded shadow w-full sm:max-w-md md:max-w-2xl lg:max-w-4xl space-y-6 mx-2">
+      <div className="bg-white p-6 rounded shadow max-w-4xl w-full mx-2 space-y-6">
         <h2 className="text-2xl font-bold text-center">
           Grafik Perbandingan MSE
         </h2>
 
-        <div ref={chartRef} className="w-full h-72 mt-4">
+        <div ref={chartRef} className="w-full h-72">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={chartData}
@@ -130,60 +224,49 @@ export default function GrafikModalMSE({ data, onClose }) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis
-                tickFormatter={(val) =>
-                  val >= 1_000_000 ? val / 1_000_000 + "jt" : val
+                tickFormatter={(v) =>
+                  v >= 1_000_000 ? v / 1_000_000 + "jt" : v
                 }
               />
-              <Tooltip formatter={(val, key) => [formatCurrency(val), key]} />
+              <Tooltip formatter={(v) => fmt(v)} />
               <Legend />
-              <Line
-                type="monotone"
-                dataKey="Omset"
-                stroke="#4CAF50"
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="Produksi"
-                stroke="#2196F3"
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="Biaya"
-                stroke="#FF9800"
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="TenagaTetap"
-                stroke="#9C27B0"
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="TenagaTidakTetap"
-                stroke="#795548"
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="Laba"
-                stroke="#009688"
-                strokeWidth={2}
-              />
+              {[
+                "Omset",
+                "Produksi",
+                "Biaya",
+                "TenagaTetap",
+                "TenagaTidakTetap",
+                "Laba",
+              ].map((k, i) => (
+                <Line
+                  key={k}
+                  type="monotone"
+                  dataKey={k}
+                  strokeWidth={2}
+                  stroke={
+                    [
+                      "#4CAF50",
+                      "#2196F3",
+                      "#FF9800",
+                      "#9C27B0",
+                      "#795548",
+                      "#009688",
+                    ][i]
+                  }
+                />
+              ))}
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="overflow-x-auto text-sm mt-6">
+        <div className="overflow-x-auto text-sm">
           <table className="min-w-full border text-center rounded">
             <thead className="bg-gray-100">
               <tr>
                 <th className="p-2 border">Kategori</th>
-                {chartData.map((entry, idx) => (
-                  <th key={idx} className="p-2 border">
-                    {entry.name}
+                {chartData.map((e, i) => (
+                  <th key={i} className="p-2 border">
+                    {e.name}
                   </th>
                 ))}
               </tr>
@@ -195,40 +278,39 @@ export default function GrafikModalMSE({ data, onClose }) {
                 "TenagaTetap",
                 "TenagaTidakTetap",
                 "Laba",
-              ].map((key) => (
-                <tr key={key} className="border-t">
-                  <td className="p-2 border font-medium">{key}</td>
-                  {chartData.map((entry, idx) => {
-                    const val = entry[key];
-                    return (
-                      <td key={idx} className="p-2 border">
-                        {isNaN(val)
-                          ? "-"
-                          : key.includes("Tenaga")
-                          ? val
-                          : formatCurrency(val)}
-                      </td>
-                    );
-                  })}
+              ].map((k) => (
+                <tr key={k} className="border-t">
+                  <td className="p-2 border font-medium">{k}</td>
+                  {chartData.map((e, i) => (
+                    <td key={i} className="p-2 border">
+                      {isNaN(e[k])
+                        ? "-"
+                        : k.includes("Tenaga")
+                        ? e[k]
+                        : fmt(e[k])}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-center pt-4 gap-2 sm:gap-0">
+        <div className="flex justify-end gap-2">
           <button
-            onClick={handleExportImage}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            onClick={exportImage}
+            className="bg-gray-200 px-4 py-2 rounded"
           >
-            Ekspor Gambar
+            📷 Ekspor Gambar
           </button>
-          <button
-            onClick={onClose}
-            className="text-gray-600 hover:underline w-full sm:w-auto text-center"
-          >
-            Tutup
+          <button onClick={exportPDF} className="bg-gray-200 px-4 py-2 rounded">
+            📄 Ekspor PDF
           </button>
+          {onClose && (
+            <button onClick={onClose} className="bg-red-100 px-4 py-2 rounded">
+              Tutup
+            </button>
+          )}
         </div>
       </div>
     </div>
