@@ -75,38 +75,22 @@ export default function App() {
   };
 
   // Render auth pages
+  // Render auth pages
   if (page === "login") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50">
         <div className="w-full max-w-md">
-          <Login onSuccess={handleAuthSuccess} />
-          <div className="text-center mt-4">
-            <span>Belum punya akun? </span>
-            <button
-              className="text-blue-600 underline font-semibold hover:text-blue-800 transition"
-              onClick={() => setPage("signup")}
-            >
-              Daftar
-            </button>
-          </div>
+          <Login onSuccess={handleAuthSuccess} setPage={setPage} />
         </div>
       </div>
     );
   }
+
   if (page === "signup") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50">
         <div className="w-full max-w-md">
-          <Signup onSuccess={handleAuthSuccess} />
-          <div className="text-center mt-4">
-            <span>Sudah punya akun? </span>
-            <button
-              className="text-blue-600 underline font-semibold hover:text-blue-800 transition"
-              onClick={() => setPage("login")}
-            >
-              Login
-            </button>
-          </div>
+          <Signup onSuccess={handleAuthSuccess} setPage={setPage} />
         </div>
       </div>
     );

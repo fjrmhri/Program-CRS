@@ -1,104 +1,107 @@
 import React, { useState } from "react";
-import { auth, firestore } from "../../firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { auth } from "../../firebase";
+import logo from "../../assets/logo.PNG";
 
-export default function Login({ onSuccess }) {
-  const [form, setForm] = useState({ identity: "", password: "" });
+export default function Login({ onSuccess, setPage }) {
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    // Cari user by phone atau nama
-    const usersRef = collection(firestore, "users");
-    const q = query(usersRef, where("phone", "==", form.identity));
-    const snap = await getDocs(q);
+    const fakeEmail = `${phone}@dummy.com`;
 
-    let userDoc = null;
-    if (!snap.empty) {
-      userDoc = snap.docs[0].data();
-    } else {
-      // Coba cari by nama
-      const q2 = query(usersRef, where("nama", "==", form.identity));
-      const snap2 = await getDocs(q2);
-      if (!snap2.empty) userDoc = snap2.docs[0].data();
-    }
-
-    if (!userDoc) {
-      setError("User tidak ditemukan.");
-      setLoading(false);
-      return;
-    }
-
-    // Gunakan email dummy
-    const fakeEmail = `${userDoc.phone}@dummy.com`;
     try {
-      await signInWithEmailAndPassword(auth, fakeEmail, form.password);
+      await signInWithEmailAndPassword(auth, fakeEmail, password);
       if (onSuccess) onSuccess();
     } catch (err) {
-      setError("Password salah.");
+      setError("Nomor telepon atau password salah.");
     }
     setLoading(false);
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md bg-white rounded-2xl shadow-xl px-8 py-10 space-y-6 border border-gray-100"
-      >
-        <h2 className="text-2xl font-bold text-center text-blue-700 mb-2 tracking-wide">
-          Login
-        </h2>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+        {/* Header */}
+        <div className="flex flex-col items-center mb-6">
+          <img src={logo} alt="Logo" className="h-20 mb-3" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-1">
+            Selamat Datang
+          </h2>
+          <p className="text-gray-600 text-base">
+            Silakan masuk untuk melanjutkan
+          </p>
+        </div>
+
+        {/* Error */}
         {error && (
-          <div className="text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2 text-sm text-center">
+          <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-2 rounded-lg text-sm text-center mb-4">
             {error}
           </div>
         )}
-        <div className="space-y-2">
-          <label className="block text-gray-700 font-medium mb-1">
-            Nama atau Nomor Telepon
-          </label>
-          <input
-            name="identity"
-            placeholder="Nama atau Nomor Telepon"
-            value={form.identity}
-            onChange={handleChange}
-            required
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:ring-2 focus:ring-blue-300 focus:outline-none transition"
-            autoComplete="username"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="block text-gray-700 font-medium mb-1">
-            Password
-          </label>
-          <input
-            name="password"
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            required
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:ring-2 focus:ring-blue-300 focus:outline-none transition"
-            autoComplete="current-password"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg shadow-md font-semibold hover:bg-blue-700 active:scale-95 transition text-lg"
-        >
-          {loading ? "Login..." : "Login"}
-        </button>
-      </form>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-base font-medium text-gray-700 mb-1">
+              Nomor Telepon
+            </label>
+            <input
+              type="text"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:ring-2 focus:ring-green-400 focus:outline-none transition"
+              placeholder="Masukkan nomor telepon"
+              autoComplete="tel"
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <label className="block text-base font-medium text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:ring-2 focus:ring-green-400 focus:outline-none transition"
+              placeholder="Masukkan password"
+              autoComplete="current-password"
+              disabled={loading}
+            />
+          </div>
+
+          {/* Tombol Login */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full h-11 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition"
+          >
+            {loading ? "Memproses..." : "Masuk"}
+          </button>
+
+          {/* Link ke Signup */}
+          <div className="text-center mt-4">
+            <span className="text-gray-600">Belum punya akun? </span>
+            <button
+              type="button"
+              onClick={() => setPage("signup")}
+              className="text-blue-600 underline font-semibold hover:text-blue-800 transition"
+            >
+              Daftar
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
