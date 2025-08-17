@@ -85,7 +85,7 @@ export default function Dashboard({ user, onAdd, onView, onEdit }) {
                       </button>
                       <button
                         onClick={() => onEdit(d)}
-                        className="bg-yellow-500 text-white hover:bg-yellow-600 px-4 py-1.5 rounded text-xs font-semibold transition"
+                        className="bg-yellow-500 text-white hover:bg-yellow-600 px-5 py-1.5 rounded text-xs font-semibold transition"
                       >
                         Edit
                       </button>
