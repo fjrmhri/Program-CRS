@@ -59,17 +59,24 @@ export default function DetailModal({ data, onClose }) {
   const posyanduList = ["Semua", ...new Set(raw.map((d) => d.posyandu))];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-center items-start pt-10 overflow-y-auto">
-      <div className="bg-white p-4 sm:p-5 md:p-6 rounded shadow w-full sm:max-w-md md:max-w-2xl lg:max-w-4xl space-y-4 mx-2 sm:mx-auto">
-        <h2 className="text-xl sm:text-2xl font-bold break-words">{title}</h2>
+    <div className="fixed inset-0 bg-black/40 z-50 flex justify-center items-start pt-10 overflow-y-auto">
+      <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl w-full sm:max-w-md md:max-w-2xl lg:max-w-4xl space-y-4 mx-2 sm:mx-auto animate-fadeIn">
+        <h2 className="text-2xl font-bold text-blue-700 text-center break-words">
+          {title}
+        </h2>
 
-        <div className="text-xs sm:text-sm text-gray-600 space-y-1">
+        <div className="text-xs sm:text-sm text-gray-600 space-y-1 text-center">
           <p>
-            📆 Tanggal Pre Test: {new Date(preDate).toLocaleDateString("id-ID")}
+            📆 Tanggal Pre Test:{" "}
+            <span className="font-medium">
+              {new Date(preDate).toLocaleDateString("id-ID")}
+            </span>
           </p>
           <p>
             📆 Tanggal Post Test:{" "}
-            {new Date(postDate).toLocaleDateString("id-ID")}
+            <span className="font-medium">
+              {new Date(postDate).toLocaleDateString("id-ID")}
+            </span>
           </p>
         </div>
 
@@ -78,11 +85,28 @@ export default function DetailModal({ data, onClose }) {
         </div>
 
         <div className="space-y-1 text-xs sm:text-sm mt-4">
-          <p>👥 Jumlah peserta: {analyses.total}</p>
-          <p>📊 Rata-rata Pre Test: {analyses.avgPre.toFixed(2)}</p>
-          <p>📈 Rata-rata Post Test: {analyses.avgPost.toFixed(2)}</p>
-          <p>⬆️ Peningkatan: {analyses.peningkatan.toFixed(2)}%</p>
-          <p>✅ Peserta yang paham (≥70): {analyses.paham} orang</p>
+          <p>
+            👥 Jumlah peserta:{" "}
+            <span className="font-medium">{analyses.total}</span>
+          </p>
+          <p>
+            📊 Rata-rata Pre Test:{" "}
+            <span className="font-medium">{analyses.avgPre.toFixed(2)}</span>
+          </p>
+          <p>
+            📈 Rata-rata Post Test:{" "}
+            <span className="font-medium">{analyses.avgPost.toFixed(2)}</span>
+          </p>
+          <p>
+            ⬆️ Peningkatan:{" "}
+            <span className="font-medium">
+              {analyses.peningkatan.toFixed(2)}%
+            </span>
+          </p>
+          <p>
+            ✅ Peserta yang paham (≥70):{" "}
+            <span className="font-medium">{analyses.paham}</span> orang
+          </p>
           <div className="mt-2">
             <p className="font-semibold">Distribusi:</p>
             <ul className="list-disc ml-4 sm:ml-6">
@@ -98,7 +122,7 @@ export default function DetailModal({ data, onClose }) {
           <select
             value={selectedPosyandu}
             onChange={(e) => setSelectedPosyandu(e.target.value)}
-            className="border px-2 py-1 rounded text-sm"
+            className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-300 focus:outline-none transition bg-white shadow-sm w-full sm:w-auto"
           >
             {posyanduList.map((pos, i) => (
               <option key={i} value={pos}>
@@ -108,7 +132,7 @@ export default function DetailModal({ data, onClose }) {
           </select>
           <button
             onClick={() => setSortBySelisih((s) => !s)}
-            className="text-sm text-blue-600 hover:underline"
+            className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold shadow hover:bg-blue-100 transition w-full sm:w-auto"
           >
             {sortBySelisih
               ? "🔄 Urutan Asli"
@@ -146,7 +170,7 @@ export default function DetailModal({ data, onClose }) {
         <div className="flex flex-col sm:flex-row justify-between items-center pt-4 gap-2 sm:gap-0">
           <button
             onClick={handleExport}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full sm:w-auto"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow transition w-full sm:w-auto"
           >
             Ekspor Excel
           </button>

@@ -210,10 +210,10 @@ export default function FormModalMSE({ onClose, existingData }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start pt-10 overflow-y-auto z-50">
-      <div className="bg-white p-6 rounded shadow-lg w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex justify-center items-start pt-10 overflow-y-auto z-50">
+      <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={onSubmit} className="space-y-6">
-          <h2 className="text-xl font-bold">
+          <h2 className="text-2xl font-bold text-green-700 text-center mb-2">
             {isEdit ? "Edit Monitoring MSE" : "Input Monitoring MSE"}
           </h2>
           {/* Meta info fields (nama..cdo) */}
@@ -353,14 +353,14 @@ export default function FormModalMSE({ onClose, existingData }) {
           <div className="flex flex-col md:flex-row justify-end gap-3 pt-4">
             <button
               type="submit"
-              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition"
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition w-full md:w-auto"
             >
               {isEdit ? "Perbarui Data" : "Simpan"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="text-gray-600 hover:underline"
+              className="text-gray-600 hover:underline w-full md:w-auto"
             >
               Batal
             </button>

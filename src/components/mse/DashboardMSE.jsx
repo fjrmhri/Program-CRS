@@ -6,13 +6,18 @@ import GrafikModalMSE from "./GrafikModalMSE";
 import groupBy from "lodash/groupBy";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { addLog } from "../../utils/logUtils";
+import { ArrowPathIcon } from "@heroicons/react/24/outline"; // Heroicons untuk refresh
 
-export default function DashboardMSE({ onAddForm, onView, onCompare }) {
+export default function DashboardMSE({ user, onAddForm, onView, onCompare }) {
   const [datasets, setDatasets] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [editData, setEditData] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [refreshToggle, setRefreshToggle] = useState(false);
+
+  // Tambahan untuk filter desa
+  const [desaList, setDesaList] = useState([]);
+  const [filterDesa, setFilterDesa] = useState("");
 
   const normalizeKey = (str) => (str || "").toString().trim().toLowerCase();
 
@@ -197,6 +202,13 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
           (a, b) => new Date(b.effectiveDate) - new Date(a.effectiveDate)
         );
         setDatasets(finalSorted);
+
+        // Ambil daftar desa unik dari data
+        const allDesa = finalSorted
+          .map((d) => d.meta?.desa)
+          .filter(Boolean)
+          .map((d) => d.trim());
+        setDesaList([...new Set(allDesa)]);
       });
     });
   }, []);
@@ -245,6 +257,13 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
 
     const deletePromises = toDelete.map((r) => remove(r));
     await Promise.all(deletePromises);
+
+    // Tambahkan log aktivitas
+    await addLog({
+      namaUser: user?.nama || "Unknown",
+      aksi: `${user?.nama || "User"} menghapus data MSE (${nama} - ${usaha})`,
+      dataTerkait: meta,
+    });
 
     alert("Semua data berhasil dihapus.");
     handleRefresh();
@@ -458,89 +477,115 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
       year: "numeric",
     });
 
+  // Ganti highlightMatch agar tidak error JSX
   const highlightMatch = (text = "", keyword = "") => {
-    const regex = new RegExp(`(${keyword})`, "gi");
-    return (
-      <span
-        dangerouslySetInnerHTML={{
-          __html: text.replace(
-            regex,
-            "<span class='bg-green-200 font-medium'>$1</span>"
-          ),
-        }}
-      />
+    if (!keyword) return text;
+    const regex = new RegExp(
+      `(${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+      "gi"
+    );
+    const parts = text.split(regex);
+    return parts.map((part, i) =>
+      regex.test(part) ? (
+        <span key={i} className="bg-green-200 font-medium">
+          {part}
+        </span>
+      ) : (
+        part
+      )
     );
   };
 
-  const filteredDatasets = datasets.filter((d) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      d.meta?.nama?.toLowerCase().includes(q) ||
-      d.meta?.desa?.toLowerCase().includes(q) ||
-      d.meta?.usaha?.toLowerCase().includes(q)
-    );
-  });
+  // Filter berdasarkan desa
+  const filteredByDesa = filterDesa
+    ? datasets.filter((d) => (d.meta?.desa || "").trim() === filterDesa)
+    : datasets;
+
+  // Filter pencarian
+  const filteredDatasets = filteredByDesa;
 
   return (
     <>
-      <div className="p-1 sm:p-2 md:p-4 bg-white shadow rounded">
+      <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <div className="w-full sm:w-auto flex-1">
-            <h2 className="text-base sm:text-lg md:text-xl font-semibold mb-2">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-green-700 mb-2">
               Monitoring Pembukuan UMKM
             </h2>
-            <input
-              type="text"
-              placeholder="Cari nama, desa, atau produk..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 text-sm border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-300"
-            />
           </div>
           <div className="flex flex-col sm:flex-row sm:justify-end w-full gap-2 sm:w-auto sm:flex-nowrap">
             <div className="flex flex-row justify-between gap-2 w-full sm:w-auto">
               <button
                 onClick={onAddForm}
-                className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 w-full sm:w-auto"
+                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow hover:bg-green-700 active:scale-95 transition w-full sm:w-auto"
               >
                 + Input Manual
               </button>
               <button
                 onClick={handleExport}
-                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 w-full sm:w-auto"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow hover:bg-blue-700 active:scale-95 transition w-full sm:w-auto"
               >
                 📥 Ekspor Excel
               </button>
               <button
                 onClick={handleRefresh}
-                className="bg-gray-500 text-white px-2 py-2 rounded text-sm hover:bg-gray-600"
+                className="bg-gray-500 text-white px-3 py-2 rounded-lg text-sm shadow hover:bg-gray-600 active:scale-95 transition flex items-center justify-center"
+                title="Refresh"
               >
-                🔄
+                <ArrowPathIcon className="w-5 h-5" />
               </button>
             </div>
           </div>
         </div>
 
+        {/* Filter Desa */}
+        <div className="mb-6 flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+          <label className="font-medium text-gray-700 text-sm min-w-[110px]">
+            Filter Asal Desa:
+          </label>
+          <select
+            className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-300 focus:outline-none transition bg-white shadow-sm w-full sm:w-auto"
+            value={filterDesa}
+            onChange={(e) => setFilterDesa(e.target.value)}
+          >
+            <option value="">Semua Desa</option>
+            {desaList.map((desa) => (
+              <option key={desa} value={desa}>
+                {desa}
+              </option>
+            ))}
+          </select>
+          {filterDesa && (
+            <button
+              type="button"
+              onClick={() => setFilterDesa("")}
+              className="ml-0 sm:ml-2 px-3 py-2 rounded-lg bg-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-300 transition"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+
         {filteredDatasets.length === 0 ? (
           <p className="text-gray-500 text-sm">Tidak ada data yang cocok.</p>
         ) : (
-          <div className="overflow-x-auto w-full">
-            <table className="min-w-[590px] sm:min-w-[600px] w-full text-xs sm:text-sm border rounded">
+          <div className="overflow-x-auto rounded-lg shadow">
+            <table className="min-w-[590px] sm:min-w-[600px] w-full text-sm border rounded">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="px-2 py-2 text-left">Nama UMKM</th>
-                  <th className="px-2 py-2 text-left">Usaha/Produk</th>
-                  <th className="px-2 py-2 text-left">Desa</th>
-                  <th className="px-2 py-2 text-left">Sumber</th>
-                  <th className="px-2 py-2 text-left">Aksi</th>
+                  <th className="px-3 py-2 text-left">Nama UMKM</th>
+                  <th className="px-3 py-2 text-left">Usaha/Produk</th>
+                  <th className="px-3 py-2 text-left">Desa</th>
+                  <th className="px-3 py-2 text-left">Sumber</th>
+                  <th className="px-3 py-2 text-left">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredDatasets.map((d) => (
                   <tr key={d.id} className="border-t">
-                    <td className="px-2 py-2">
+                    <td className="px-3 py-2">
                       <div className="flex flex-col">
-                        <span>{highlightMatch(d.meta?.nama, searchQuery)}</span>
+                        <span>{highlightMatch(d.meta?.nama, "")}</span>
                         <span className="text-[10px] text-gray-500 italic">
                           Terakhir Update:{" "}
                           {formatDate(
@@ -549,13 +594,13 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                         </span>
                       </div>
                     </td>
-                    <td className="px-2 py-2">
-                      {highlightMatch(d.meta?.usaha, searchQuery)}
+                    <td className="px-3 py-2">
+                      {highlightMatch(d.meta?.usaha, "")}
                     </td>
-                    <td className="px-2 py-2">
-                      {highlightMatch(d.meta?.desa, searchQuery)}
+                    <td className="px-3 py-2">
+                      {highlightMatch(d.meta?.desa, "")}
                     </td>
-                    <td className="px-2 py-2">
+                    <td className="px-3 py-2">
                       <span
                         className={`text-xs px-2 py-1 rounded font-medium ${
                           d.source === "Manual"
@@ -566,11 +611,11 @@ export default function DashboardMSE({ onAddForm, onView, onCompare }) {
                         {d.source === "Manual" ? "Admin" : "Pelaku"}
                       </span>
                     </td>
-                    <td className="px-2 py-2">
+                    <td className="px-3 py-2">
                       <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2">
                         <button
                           onClick={() => onView(d)}
-                          className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded text-xs hover:bg-blue-100"
+                          className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded text-xs hover:bg-blue-100 transition"
                         >
                           Detail
                         </button>

@@ -209,9 +209,9 @@ export default function GrafikModalMSE({ data, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-center items-start pt-10 overflow-y-auto">
-      <div className="bg-white p-6 rounded shadow max-w-4xl w-full mx-2 space-y-6">
-        <h2 className="text-2xl font-bold text-center">
+    <div className="fixed inset-0 bg-black/40 z-50 flex justify-center items-start pt-10 overflow-y-auto">
+      <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl max-w-4xl w-full mx-2 space-y-6 animate-fadeIn">
+        <h2 className="text-2xl font-bold text-green-700 text-center">
           Grafik Perbandingan MSE
         </h2>
 
@@ -228,7 +228,7 @@ export default function GrafikModalMSE({ data, onClose }) {
                   v >= 1_000_000 ? v / 1_000_000 + "jt" : v
                 }
               />
-              <Tooltip formatter={(v) => fmt(v)} />
+              {/* <Tooltip formatter={(v) => fmt(v)} /> */}
               <Legend />
               {[
                 "Omset",
@@ -296,18 +296,18 @@ export default function GrafikModalMSE({ data, onClose }) {
           </table>
         </div>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
           <button
             onClick={exportImage}
-            className="bg-gray-200 px-4 py-2 rounded"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow hover:bg-blue-700 active:scale-95 transition w-full sm:w-auto"
           >
             📷 Ekspor Gambar
           </button>
-          <button onClick={exportPDF} className="bg-gray-200 px-4 py-2 rounded">
-            📄 Ekspor PDF
-          </button>
           {onClose && (
-            <button onClick={onClose} className="bg-red-100 px-4 py-2 rounded">
+            <button
+              onClick={onClose}
+              className="text-gray-600 hover:underline w-full sm:w-auto"
+            >
               Tutup
             </button>
           )}

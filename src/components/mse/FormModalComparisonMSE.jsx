@@ -109,10 +109,10 @@ export default function FormModalComparisonMSE({ data, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start pt-10 z-50 overflow-y-auto">
-      <div className="bg-white p-6 rounded shadow-lg w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex justify-center items-start pt-10 z-50 overflow-y-auto">
+      <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <h2 className="text-xl font-bold">
+          <h2 className="text-2xl font-bold text-yellow-700 text-center mb-2">
             Input Data Perbandingan Monitoring MSE
           </h2>
 
@@ -183,14 +183,14 @@ export default function FormModalComparisonMSE({ data, onClose }) {
           <div className="flex flex-col md:flex-row justify-end gap-3 pt-4">
             <button
               type="submit"
-              className="bg-yellow-500 text-white px-6 py-2 rounded hover:bg-yellow-600"
+              className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded-lg font-semibold shadow transition w-full md:w-auto"
             >
               Simpan Perbandingan
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="text-gray-600 hover:underline"
+              className="text-gray-600 hover:underline w-full md:w-auto"
             >
               Batal
             </button>

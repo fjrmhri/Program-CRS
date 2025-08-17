@@ -105,9 +105,9 @@ export default function DetailModalMSE({ data, onClose }) {
     .replace(/[^\w\-]/g, "");
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-center items-start pt-10 overflow-y-auto">
-      <div className="bg-white p-6 rounded shadow w-full sm:max-w-md md:max-w-2xl lg:max-w-4xl space-y-4 mx-2">
-        <h2 className="text-2xl font-bold text-center">
+    <div className="fixed inset-0 bg-black/40 z-50 flex justify-center items-start pt-10 overflow-y-auto">
+      <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl w-full sm:max-w-md md:max-w-2xl lg:max-w-4xl space-y-4 mx-2 sm:mx-auto animate-fadeIn">
+        <h2 className="text-2xl font-bold text-green-700 text-center mb-2">
           Detail Monitoring MSE
         </h2>
 
@@ -176,11 +176,10 @@ export default function DetailModalMSE({ data, onClose }) {
           <PDFDownloadLink
             document={<MSEDocument data={data} />}
             fileName={`Template_MSE_${safeFileName}.pdf`}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-green-700 transition w-full sm:w-auto text-center"
           >
             📄 Ekspor PDF
           </PDFDownloadLink>
-
           <button
             onClick={onClose}
             className="text-gray-600 hover:underline w-full sm:w-auto text-center"

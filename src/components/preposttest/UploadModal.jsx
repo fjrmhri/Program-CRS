@@ -46,54 +46,64 @@ export default function UploadModal({ onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start pt-10 overflow-y-auto z-50">
+    <div className="fixed inset-0 bg-black/50 flex justify-center items-start pt-10 overflow-y-auto z-50">
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-6 rounded shadow-lg w-full max-w-5xl max-h-[90vh] overflow-y-auto space-y-6"
+        className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto space-y-6 animate-fadeIn"
       >
-        <h2 className="text-xl font-bold mb-2">Tambah Data Pre-Post Test</h2>
+        <h2 className="text-2xl font-bold mb-2 text-blue-700 text-center">
+          Tambah Data Pre-Post Test
+        </h2>
 
         <div>
-          <label className="block mb-1 font-medium">Nama Data</label>
+          <label className="block mb-1 font-medium text-gray-700">
+            Nama Data
+          </label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="border px-3 py-2 rounded w-full"
+            className="border border-gray-300 px-4 py-2 rounded-lg w-full focus:ring-2 focus:ring-blue-300 focus:outline-none transition"
             required
           />
         </div>
 
         <div className="flex flex-col md:flex-row gap-2 md:gap-4">
           <div className="flex-1">
-            <label className="block mb-1 font-medium">Tanggal Pre Test</label>
+            <label className="block mb-1 font-medium text-gray-700">
+              Tanggal Pre Test
+            </label>
             <input
               type="date"
               value={preDate}
               onChange={(e) => setPreDate(e.target.value)}
-              className="border px-3 py-2 rounded w-full"
+              className="border border-gray-300 px-4 py-2 rounded-lg w-full focus:ring-2 focus:ring-blue-300 focus:outline-none transition"
               required
             />
           </div>
           <div className="flex-1">
-            <label className="block mb-1 font-medium">Tanggal Post Test</label>
+            <label className="block mb-1 font-medium text-gray-700">
+              Tanggal Post Test
+            </label>
             <input
               type="date"
               value={postDate}
               onChange={(e) => setPostDate(e.target.value)}
-              className="border px-3 py-2 rounded w-full"
+              className="border border-gray-300 px-4 py-2 rounded-lg w-full focus:ring-2 focus:ring-blue-300 focus:outline-none transition"
               required
             />
           </div>
         </div>
 
         <div>
-          <label className="block mb-1 font-medium">Upload File Excel</label>
+          <label className="block mb-1 font-medium text-gray-700">
+            Upload File Excel
+          </label>
           <input
             type="file"
             accept=".xlsx,.xls,.csv"
             onChange={(e) => setFile(e.target.files[0])}
-            className="border px-3 py-2 rounded w-full"
+            className="border border-gray-300 px-4 py-2 rounded-lg w-full focus:ring-2 focus:ring-blue-300 focus:outline-none transition"
             required
           />
         </div>
@@ -102,7 +112,7 @@ export default function UploadModal({ onClose, onSuccess }) {
           <button
             type="submit"
             disabled={loading}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blur-700 w-full md:w-auto"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow transition w-full md:w-auto"
           >
             {loading ? <Spinner /> : "Submit"}
           </button>

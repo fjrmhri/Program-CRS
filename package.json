@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@fontsource/poppins": "^5.2.6",
+    "@heroicons/react": "^2.2.0",
     "@react-pdf/renderer": "^4.3.0",
     "@relume_io/relume-tailwind": "^1.3.0",
     "@relume_io/relume-ui": "^1.3.1",
