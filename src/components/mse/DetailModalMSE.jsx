@@ -178,7 +178,7 @@ export default function DetailModalMSE({ data, onClose }) {
             fileName={`Template_MSE_${safeFileName}.pdf`}
             className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-green-700 transition w-full sm:w-auto text-center"
           >
-            📄 Ekspor PDF
+            Ekspor PDF
           </PDFDownloadLink>
           <button
             onClick={onClose}

@@ -44,37 +44,21 @@ export default function GrafikModalMSE({ data, onClose }) {
   const gatherComparisons = () => {
     const raw = [];
 
-    // Data utama
     if (meta?.tanggal) {
-      raw.push({
-        meta,
-        monitoring,
-        source: "current",
-      });
+      raw.push({ meta, monitoring, source: "current" });
     }
 
-    // Admin - semua dari comparisonList
     if (source === "Manual" && Array.isArray(comparisonList)) {
       comparisonList.forEach((cmp) => {
-        if (cmp?.meta?.tanggal) {
-          raw.push({
-            meta: cmp.meta,
-            monitoring: cmp.monitoring,
-            source: "comparisonList",
-          });
-        }
+        if (cmp?.meta?.tanggal)
+          raw.push({ meta: cmp.meta, monitoring: cmp.monitoring });
       });
     }
 
-    // Pelaku - dari datasets + bookkeeping
     if (source === "User") {
       (data.datasets || []).forEach((e) => {
         if (matchesIdentity(e.meta) && e.meta?.tanggal) {
-          raw.push({
-            meta: e.meta,
-            monitoring: e.monitoring,
-            source: "datasets",
-          });
+          raw.push({ meta: e.meta, monitoring: e.monitoring });
         }
       });
 
@@ -83,11 +67,7 @@ export default function GrafikModalMSE({ data, onClose }) {
         Object.values(data.bookkeeping).forEach((perUser) => {
           Object.values(perUser).forEach((entry) => {
             if (matchesIdentity(entry.meta) && entry.meta?.tanggal) {
-              raw.push({
-                meta: entry.meta,
-                monitoring: entry.monitoring,
-                source: "bookkeeping(prop)",
-              });
+              raw.push({ meta: entry.meta, monitoring: entry.monitoring });
               countBk++;
             }
           });
@@ -97,31 +77,22 @@ export default function GrafikModalMSE({ data, onClose }) {
       if (countBk === 0 && bookkeepingFallback) {
         Object.values(bookkeepingFallback).forEach((entry) => {
           if (matchesIdentity(entry.meta) && entry.meta?.tanggal) {
-            raw.push({
-              meta: entry.meta,
-              monitoring: entry.monitoring,
-              source: "bookkeeping(fb)",
-            });
+            raw.push({ meta: entry.meta, monitoring: entry.monitoring });
           }
         });
       }
     }
 
-    // Urutkan lama → baru
     raw.sort(
       (a, b) =>
         new Date(normalizeDate(a.meta.tanggal)) -
         new Date(normalizeDate(b.meta.tanggal))
     );
-
-    // Hapus entri tanpa tanggal & duplikat tanggal
-    const seenDates = new Set();
+    const seen = new Set();
     return raw.filter((e) => {
-      if (!e.meta?.tanggal) return false;
-      const normDate = normalizeDate(e.meta.tanggal);
-      if (!normDate) return false;
-      if (seenDates.has(normDate)) return false;
-      seenDates.add(normDate);
+      const normDate = normalizeDate(e.meta?.tanggal);
+      if (!normDate || seen.has(normDate)) return false;
+      seen.add(normDate);
       return true;
     });
   };
@@ -135,12 +106,10 @@ export default function GrafikModalMSE({ data, onClose }) {
 
   const extract = (mon, u) =>
     clean(mon.find((m) => m.uraian === u)?.items?.[0]?.hasil);
-
   const extractBiaya = (mon) =>
     mon
       .find((m) => m.uraian === "Biaya operasional per bulan")
       ?.items?.reduce((s, i) => s + clean(i.hasil), 0) || 0;
-
   const sumTenaga = (mon, u) =>
     mon
       .find((m) => m.uraian === u)
@@ -148,13 +117,10 @@ export default function GrafikModalMSE({ data, onClose }) {
 
   const mapped = allComparisons
     .map(({ meta: m, monitoring: mon }) => {
-      const raw = m.tanggal;
-      const norm = normalizeDate(raw);
       const om = extract(mon, "Omset / penjualan per bulan");
       const bi = extractBiaya(mon);
       return {
-        rawTanggal: raw,
-        normalized: norm,
+        name: m.tanggal,
         Omset: om,
         Biaya: bi,
         Produksi: extract(mon, "Jumlah produksi per bulan"),
@@ -163,28 +129,7 @@ export default function GrafikModalMSE({ data, onClose }) {
         Laba: om - bi,
       };
     })
-    .filter((e) => e.normalized)
-    .sort((a, b) => new Date(a.normalized) - new Date(b.normalized));
-
-  // Ambil data terbaik per tanggal
-  const byDate = {};
-  const score = (e) => e.Omset * 10000 + e.Produksi * 100 + e.Laba;
-  mapped.forEach((e) => {
-    const k = e.normalized;
-    if (!byDate[k] || score(e) > score(byDate[k])) byDate[k] = e;
-  });
-
-  const chartData = Object.values(byDate)
-    .sort((a, b) => new Date(a.normalized) - new Date(b.normalized))
-    .map((e) => ({
-      name: e.rawTanggal,
-      Omset: e.Omset,
-      Biaya: e.Biaya,
-      Produksi: e.Produksi,
-      TenagaTetap: e.TenagaTetap,
-      TenagaTidakTetap: e.TenagaTidakTetap,
-      Laba: e.Laba,
-    }));
+    .filter((e) => e.name);
 
   const fmt = (v) =>
     new Intl.NumberFormat("id-ID", {
@@ -209,62 +154,70 @@ export default function GrafikModalMSE({ data, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex justify-center items-start pt-10 overflow-y-auto">
-      <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl max-w-4xl w-full mx-2 space-y-6 animate-fadeIn">
-        <h2 className="text-2xl font-bold text-green-700 text-center">
-          Grafik Perbandingan MSE
-        </h2>
+    <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-start pt-10 overflow-y-auto">
+      <div className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-5xl w-full mx-2 space-y-6 animate-fadeIn">
+        {/* Header */}
+        <div className="text-center space-y-1">
+          <h2 className="text-2xl font-bold text-green-700">
+            Grafik Perbandingan MSE
+          </h2>
+          <p className="text-gray-500 text-sm">
+            Visualisasi omset, biaya, tenaga kerja, produksi, dan laba
+          </p>
+        </div>
 
-        <div ref={chartRef} className="w-full h-72">
+        {/* Chart */}
+        <div ref={chartRef} className="w-full h-64 md:h-80">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
-              data={chartData}
-              margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
+              data={mapped}
+              margin={{ top: 20, right: 30, bottom: 20, left: 10 }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
               <YAxis
+                tick={{ fontSize: 12 }}
                 tickFormatter={(v) =>
                   v >= 1_000_000 ? v / 1_000_000 + "jt" : v
                 }
               />
-              {/* <Tooltip formatter={(v) => fmt(v)} /> */}
-              <Legend />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: "12px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                }}
+                formatter={(v, n) => (n.includes("Tenaga") ? v : fmt(v))}
+              />
+              <Legend verticalAlign="top" height={36} />
               {[
-                "Omset",
-                "Produksi",
-                "Biaya",
-                "TenagaTetap",
-                "TenagaTidakTetap",
-                "Laba",
-              ].map((k, i) => (
+                { key: "Omset", color: "#16a34a" },
+                { key: "Biaya", color: "#ef4444" },
+                { key: "Produksi", color: "#3b82f6" },
+                { key: "TenagaTetap", color: "#9333ea" },
+                { key: "TenagaTidakTetap", color: "#f59e0b" },
+                { key: "Laba", color: "#0d9488" },
+              ].map((l) => (
                 <Line
-                  key={k}
+                  key={l.key}
                   type="monotone"
-                  dataKey={k}
+                  dataKey={l.key}
+                  stroke={l.color}
                   strokeWidth={2}
-                  stroke={
-                    [
-                      "#4CAF50",
-                      "#2196F3",
-                      "#FF9800",
-                      "#9C27B0",
-                      "#795548",
-                      "#009688",
-                    ][i]
-                  }
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 6 }}
                 />
               ))}
             </LineChart>
           </ResponsiveContainer>
         </div>
 
+        {/* Tabel Ringkasan */}
         <div className="overflow-x-auto text-sm">
-          <table className="min-w-full border text-center rounded">
-            <thead className="bg-gray-100">
+          <table className="min-w-full border rounded-lg text-center">
+            <thead className="bg-gray-100 text-gray-700">
               <tr>
                 <th className="p-2 border">Kategori</th>
-                {chartData.map((e, i) => (
+                {mapped.map((e, i) => (
                   <th key={i} className="p-2 border">
                     {e.name}
                   </th>
@@ -275,17 +228,21 @@ export default function GrafikModalMSE({ data, onClose }) {
               {[
                 "Omset",
                 "Biaya",
+                "Produksi",
                 "TenagaTetap",
                 "TenagaTidakTetap",
                 "Laba",
-              ].map((k) => (
-                <tr key={k} className="border-t">
+              ].map((k, idx) => (
+                <tr
+                  key={k}
+                  className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                >
                   <td className="p-2 border font-medium">{k}</td>
-                  {chartData.map((e, i) => (
+                  {mapped.map((e, i) => (
                     <td key={i} className="p-2 border">
                       {isNaN(e[k])
                         ? "-"
-                        : k.includes("Tenaga")
+                        : k.includes("Tenaga") || k === "Produksi"
                         ? e[k]
                         : fmt(e[k])}
                     </td>
@@ -296,17 +253,24 @@ export default function GrafikModalMSE({ data, onClose }) {
           </table>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
           <button
             onClick={exportImage}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow hover:bg-blue-700 active:scale-95 transition w-full sm:w-auto"
           >
-            📷 Ekspor Gambar
+            Ekspor Gambar
+          </button>
+          <button
+            onClick={exportPDF}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow hover:bg-green-700 active:scale-95 transition w-full sm:w-auto"
+          >
+            Ekspor PDF
           </button>
           {onClose && (
             <button
               onClick={onClose}
-              className="text-gray-600 hover:underline w-full sm:w-auto"
+              className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-300 transition w-full sm:w-auto"
             >
               Tutup
             </button>

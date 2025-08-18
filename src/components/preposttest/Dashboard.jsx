@@ -5,6 +5,7 @@ import { addLog } from "../../utils/logUtils";
 
 export default function Dashboard({ user, onAdd, onView, onEdit }) {
   const [datasets, setDatasets] = useState([]);
+  const [selectedDataset, setSelectedDataset] = useState("Semua");
 
   useEffect(() => {
     const q = ref(db, "datasets");
@@ -18,10 +19,8 @@ export default function Dashboard({ user, onAdd, onView, onEdit }) {
 
   const handleDelete = async (id) => {
     if (confirm("Yakin hapus data ini?")) {
-      // Ambil data yang akan dihapus untuk log
       const dataToDelete = datasets.find((d) => d.id === id);
       await remove(ref(db, `datasets/${id}`));
-      // Tambahkan log aktivitas
       await addLog({
         namaUser: user?.nama || "Unknown",
         aksi: `${user?.nama || "User"} menghapus data Pre-Post Test (${
@@ -32,9 +31,76 @@ export default function Dashboard({ user, onAdd, onView, onEdit }) {
     }
   };
 
+  // === Filter data berdasarkan pilihan ===
+  const filtered =
+    selectedDataset === "Semua"
+      ? datasets
+      : datasets.filter((d) => d.id === selectedDataset);
+
+  // === Hitung statistik summary ===
+  let highestScore = "-";
+  let improvement = "-";
+  let totalParticipants = "-";
+  let topOne = "-";
+
+  if (filtered.length > 0) {
+    const rawData = filtered.flatMap((d) => d.raw || []);
+    if (rawData.length > 0) {
+      // Nilai tertinggi post test
+      const max = Math.max(...rawData.map((d) => d.post || 0));
+      highestScore = max;
+
+      // Peningkatan rata-rata (post - pre)
+      const avgPre =
+        rawData.reduce((sum, d) => sum + (d.pre || 0), 0) / rawData.length;
+      const avgPost =
+        rawData.reduce((sum, d) => sum + (d.post || 0), 0) / rawData.length;
+      improvement = `${(((avgPost - avgPre) / (avgPre || 1)) * 100).toFixed(
+        1
+      )}%`;
+
+      // Jumlah peserta
+      totalParticipants = rawData.length;
+
+      // Juara 1 (peserta dengan selisih terbesar)
+      const ranked = [...rawData].sort(
+        (a, b) => b.post - b.pre - (a.post - a.pre)
+      );
+      topOne = ranked[0]?.nama || "-";
+    }
+  }
+
+  const stats = [
+    {
+      title: "Nilai Tertinggi",
+      value: highestScore,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+    },
+    {
+      title: "Peningkatan Kemampuan",
+      value: improvement,
+      color: "text-green-600",
+      bg: "bg-green-50",
+    },
+    {
+      title: "Jumlah Peserta",
+      value: totalParticipants,
+      color: "text-purple-600",
+      bg: "bg-purple-50",
+    },
+    {
+      title: "Juara 1",
+      value: topOne,
+      color: "text-yellow-600",
+      bg: "bg-yellow-50",
+    },
+  ];
+
   return (
     <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
         <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-blue-700">
           Data Pre-Post Test
         </h2>
@@ -46,6 +112,36 @@ export default function Dashboard({ user, onAdd, onView, onEdit }) {
         </button>
       </div>
 
+      {/* SELECT DATASET */}
+      <div className="mb-6 flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+        <select
+          value={selectedDataset}
+          onChange={(e) => setSelectedDataset(e.target.value)}
+          className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-300 focus:outline-none transition bg-white shadow-sm w-full sm:w-auto"
+        >
+          <option value="Semua">Semua Dataset</option>
+          {datasets.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.title}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* STATISTICS CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {stats.map((s, idx) => (
+          <div
+            key={idx}
+            className={`rounded-xl p-4 shadow-sm border ${s.bg} transition hover:shadow-md`}
+          >
+            <p className="text-sm font-medium text-gray-600">{s.title}</p>
+            <p className={`mt-1 text-2xl font-bold ${s.color}`}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* TABLE */}
       {datasets.length === 0 ? (
         <p className="text-gray-500 text-sm">Belum ada data.</p>
       ) : (
@@ -66,7 +162,7 @@ export default function Dashboard({ user, onAdd, onView, onEdit }) {
             </thead>
             <tbody>
               {datasets.map((d) => (
-                <tr key={d.id} className="border-t">
+                <tr key={d.id} className="border-t hover:bg-gray-50 transition">
                   <td className="px-3 py-2">{d.title}</td>
                   <td className="px-3 py-2 hidden md:table-cell">
                     {new Date(d.preDate).toLocaleDateString("id-ID")}

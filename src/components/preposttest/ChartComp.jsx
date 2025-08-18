@@ -30,9 +30,7 @@ export default function ChartComp({ raw }) {
 
   const labels =
     screenWidth < 640
-      ? raw.map((d) =>
-          d.nama.length > 8 ? d.nama.slice(0, 8) + "..." : d.nama
-        )
+      ? raw.map((d) => (d.nama.length > 6 ? d.nama.slice(0, 6) + "…" : d.nama))
       : raw.map((d) => d.nama);
 
   const data = {
@@ -41,17 +39,20 @@ export default function ChartComp({ raw }) {
       {
         label: "Pre Test",
         data: raw.map((d) => d.pre),
-        backgroundColor: "rgba(59, 130, 246, 0.5)",
+        backgroundColor: "rgba(59, 130, 246, 0.7)",
+        borderRadius: 6,
       },
       {
         label: "Post Test",
         data: raw.map((d) => d.post),
-        backgroundColor: "rgba(16, 185, 129, 0.5)",
+        backgroundColor: "rgba(16, 185, 129, 0.7)",
+        borderRadius: 6,
       },
       {
         label: "Selisih",
         data: raw.map((d) => d.post - d.pre),
-        backgroundColor: "rgba(234, 179, 8, 0.6)",
+        backgroundColor: "rgba(234, 179, 8, 0.8)",
+        borderRadius: 6,
       },
     ],
   };
@@ -73,11 +74,13 @@ export default function ChartComp({ raw }) {
         text: "Grafik Perbandingan Pre, Post, dan Selisih",
         font: {
           size: screenWidth < 640 ? 12 : screenWidth < 1024 ? 16 : 18,
+          family: "'Poppins', sans-serif",
         },
       },
       tooltip: {
         bodyFont: {
           size: screenWidth < 640 ? 10 : 12,
+          family: "'Poppins', sans-serif",
         },
       },
     },
@@ -91,8 +94,7 @@ export default function ChartComp({ raw }) {
         },
         ticks: {
           stepSize: 10,
-          precision: 0,
-          font: { size: screenWidth < 640 ? 10 : 12 },
+          font: { size: screenWidth < 640 ? 9 : 12 },
         },
       },
       x: {
@@ -105,7 +107,7 @@ export default function ChartComp({ raw }) {
           font: { size: screenWidth < 640 ? 9 : 12 },
           autoSkip: true,
           maxRotation: screenWidth < 640 ? 45 : 0,
-          minRotation: screenWidth < 640 ? 30 : 0,
+          minRotation: screenWidth < 640 ? 25 : 0,
         },
       },
     },
@@ -113,10 +115,8 @@ export default function ChartComp({ raw }) {
   };
 
   return (
-    <div className="mt-4" style={{ minHeight: screenWidth < 640 ? 220 : 320 }}>
-      <div className="w-full" style={{ height: screenWidth < 640 ? 220 : 320 }}>
-        <Bar data={data} options={options} />
-      </div>
+    <div className="w-full h-[260px] sm:h-[320px] md:h-[380px]">
+      <Bar data={data} options={options} />
     </div>
   );
 }

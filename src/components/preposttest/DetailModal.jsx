@@ -60,69 +60,84 @@ export default function DetailModal({ data, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex justify-center items-start pt-10 overflow-y-auto">
-      <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl w-full sm:max-w-md md:max-w-2xl lg:max-w-4xl space-y-4 mx-2 sm:mx-auto animate-fadeIn">
-        <h2 className="text-2xl font-bold text-blue-700 text-center break-words">
+      <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl w-full sm:max-w-md md:max-w-3xl lg:max-w-5xl space-y-6 mx-2 sm:mx-auto animate-fadeIn">
+        {/* TITLE */}
+        <h2 className="text-2xl md:text-3xl font-bold text-blue-700 text-center">
           {title}
         </h2>
 
+        {/* INFO DATE */}
         <div className="text-xs sm:text-sm text-gray-600 space-y-1 text-center">
           <p>
-            📆 Tanggal Pre Test:{" "}
+            📆 Pre Test:{" "}
             <span className="font-medium">
               {new Date(preDate).toLocaleDateString("id-ID")}
             </span>
           </p>
           <p>
-            📆 Tanggal Post Test:{" "}
+            📆 Post Test:{" "}
             <span className="font-medium">
               {new Date(postDate).toLocaleDateString("id-ID")}
             </span>
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <ChartComp raw={filteredRaw} />
-        </div>
-
-        <div className="space-y-1 text-xs sm:text-sm mt-4">
-          <p>
-            👥 Jumlah peserta:{" "}
-            <span className="font-medium">{analyses.total}</span>
-          </p>
-          <p>
-            📊 Rata-rata Pre Test:{" "}
-            <span className="font-medium">{analyses.avgPre.toFixed(2)}</span>
-          </p>
-          <p>
-            📈 Rata-rata Post Test:{" "}
-            <span className="font-medium">{analyses.avgPost.toFixed(2)}</span>
-          </p>
-          <p>
-            ⬆️ Peningkatan:{" "}
-            <span className="font-medium">
-              {analyses.peningkatan.toFixed(2)}%
-            </span>
-          </p>
-          <p>
-            ✅ Peserta yang paham (≥70):{" "}
-            <span className="font-medium">{analyses.paham}</span> orang
-          </p>
-          <div className="mt-2">
-            <p className="font-semibold">Distribusi:</p>
-            <ul className="list-disc ml-4 sm:ml-6">
-              <li>Rendah (&lt;60): {distribusi.rendah} orang</li>
-              <li>Cukup (60-69): {distribusi.cukup} orang</li>
-              <li>Tinggi (70-84): {distribusi.tinggi} orang</li>
-              <li>Sangat Tinggi (≥85): {distribusi.sangatTinggi} orang</li>
-            </ul>
+        {/* SUMMARY CARDS */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-blue-50 p-4 rounded-xl shadow-sm text-center">
+            <p className="text-xs text-gray-600">Jumlah Peserta</p>
+            <p className="text-xl font-bold text-blue-600">{analyses.total}</p>
+          </div>
+          <div className="bg-green-50 p-4 rounded-xl shadow-sm text-center">
+            <p className="text-xs text-gray-600">Rata-rata Pre</p>
+            <p className="text-xl font-bold text-green-600">
+              {analyses.avgPre.toFixed(1)}
+            </p>
+          </div>
+          <div className="bg-purple-50 p-4 rounded-xl shadow-sm text-center">
+            <p className="text-xs text-gray-600">Rata-rata Post</p>
+            <p className="text-xl font-bold text-purple-600">
+              {analyses.avgPost.toFixed(1)}
+            </p>
+          </div>
+          <div className="bg-yellow-50 p-4 rounded-xl shadow-sm text-center">
+            <p className="text-xs text-gray-600">Peningkatan</p>
+            <p className="text-xl font-bold text-yellow-600">
+              {analyses.peningkatan.toFixed(1)}%
+            </p>
           </div>
         </div>
 
+        {/* CHART */}
+        <div className="bg-gray-50 p-3 sm:p-4 rounded-xl shadow-sm">
+          <ChartComp raw={filteredRaw} />
+        </div>
+
+        {/* DISTRIBUSI */}
+        <div className="text-xs sm:text-sm mt-4">
+          <p className="font-semibold mb-1">Distribusi Nilai:</p>
+          <ul className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <li className="bg-red-50 p-2 rounded-lg text-center text-red-600">
+              Rendah (&lt;60): {distribusi.rendah}
+            </li>
+            <li className="bg-yellow-50 p-2 rounded-lg text-center text-yellow-600">
+              Cukup (60-69): {distribusi.cukup}
+            </li>
+            <li className="bg-blue-50 p-2 rounded-lg text-center text-blue-600">
+              Tinggi (70-84): {distribusi.tinggi}
+            </li>
+            <li className="bg-green-50 p-2 rounded-lg text-center text-green-600">
+              Sangat Tinggi (≥85): {distribusi.sangatTinggi}
+            </li>
+          </ul>
+        </div>
+
+        {/* FILTER + SORT */}
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-4">
           <select
             value={selectedPosyandu}
             onChange={(e) => setSelectedPosyandu(e.target.value)}
-            className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-300 focus:outline-none transition bg-white shadow-sm w-full sm:w-auto"
+            className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-300 bg-white shadow-sm w-full sm:w-auto"
           >
             {posyanduList.map((pos, i) => (
               <option key={i} value={pos}>
@@ -134,15 +149,14 @@ export default function DetailModal({ data, onClose }) {
             onClick={() => setSortBySelisih((s) => !s)}
             className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold shadow hover:bg-blue-100 transition w-full sm:w-auto"
           >
-            {sortBySelisih
-              ? "🔄 Urutan Asli"
-              : "⬆️ Urutkan Berdasarkan Selisih"}
+            {sortBySelisih ? "🔄 Urutan Asli" : "⬆️ Urutkan Selisih"}
           </button>
         </div>
 
+        {/* TABLE */}
         <div className="overflow-x-auto max-h-64 border rounded mt-2 text-xs sm:text-sm">
           <table className="min-w-full text-left">
-            <thead className="bg-gray-100">
+            <thead className="bg-gray-100 sticky top-0">
               <tr>
                 <th className="p-2">Nama</th>
                 <th className="p-2">Desa</th>
@@ -154,7 +168,7 @@ export default function DetailModal({ data, onClose }) {
             </thead>
             <tbody>
               {sortedRaw.map((row, i) => (
-                <tr key={i} className="border-t">
+                <tr key={i} className="border-t hover:bg-gray-50 transition">
                   <td className="p-2">{row.nama}</td>
                   <td className="p-2">{row.desa || "-"}</td>
                   <td className="p-2">{row.posyandu || "-"}</td>
@@ -167,7 +181,8 @@ export default function DetailModal({ data, onClose }) {
           </table>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-center pt-4 gap-2 sm:gap-0">
+        {/* ACTIONS */}
+        <div className="flex flex-col sm:flex-row justify-between items-center pt-4 gap-2">
           <button
             onClick={handleExport}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow transition w-full sm:w-auto"
@@ -176,7 +191,7 @@ export default function DetailModal({ data, onClose }) {
           </button>
           <button
             onClick={onClose}
-            className="text-gray-600 hover:underline w-full sm:w-auto text-center"
+            className="text-gray-600 hover:text-gray-800 underline w-full sm:w-auto text-center"
           >
             Tutup
           </button>

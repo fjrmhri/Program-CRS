@@ -525,7 +525,7 @@ export default function DashboardMSE({ user, onAddForm, onView, onCompare }) {
                 onClick={handleExport}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow hover:bg-blue-700 active:scale-95 transition w-full sm:w-auto"
               >
-                📥 Ekspor Excel
+                Ekspor Excel
               </button>
               <button
                 onClick={handleRefresh}
@@ -540,11 +540,8 @@ export default function DashboardMSE({ user, onAddForm, onView, onCompare }) {
 
         {/* Filter Desa */}
         <div className="mb-6 flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
-          <label className="font-medium text-gray-700 text-sm min-w-[110px]">
-            Filter Asal Desa:
-          </label>
           <select
-            className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-300 focus:outline-none transition bg-white shadow-sm w-full sm:w-auto"
+            className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-300 focus:outline-none transition bg-white shadow-sm w-full sm:w-1/4"
             value={filterDesa}
             onChange={(e) => setFilterDesa(e.target.value)}
           >
@@ -555,15 +552,52 @@ export default function DashboardMSE({ user, onAddForm, onView, onCompare }) {
               </option>
             ))}
           </select>
-          {filterDesa && (
-            <button
-              type="button"
-              onClick={() => setFilterDesa("")}
-              className="ml-0 sm:ml-2 px-3 py-2 rounded-lg bg-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-300 transition"
-            >
-              Reset
-            </button>
-          )}
+        </div>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-green-50 p-4 rounded-xl shadow-sm border">
+            <p className="text-sm text-gray-600">Total UMKM</p>
+            <p className="text-2xl font-bold text-green-700">
+              {filteredDatasets.length}
+            </p>
+          </div>
+          <div className="bg-blue-50 p-4 rounded-xl shadow-sm border">
+            <p className="text-sm text-gray-600">Input Bulan Ini</p>
+            <p className="text-2xl font-bold text-blue-700">
+              {
+                filteredDatasets.filter((d) => {
+                  const date = new Date(d.effectiveDate || d.meta?.tanggal);
+                  const now = new Date();
+                  return (
+                    date.getMonth() === now.getMonth() &&
+                    date.getFullYear() === now.getFullYear()
+                  );
+                }).length
+              }
+            </p>
+          </div>
+          <div className="bg-yellow-50 p-4 rounded-xl shadow-sm border">
+            <p className="text-sm text-gray-600">Desa Terbanyak</p>
+            <p className="text-lg font-semibold text-yellow-700">
+              {desaList.length > 0
+                ? desaList.reduce((a, b) =>
+                    filteredDatasets.filter((d) => d.meta?.desa === a).length >
+                    filteredDatasets.filter((d) => d.meta?.desa === b).length
+                      ? a
+                      : b
+                  )
+                : "-"}
+            </p>
+          </div>
+          <div className="bg-purple-50 p-4 rounded-xl shadow-sm border">
+            <p className="text-sm text-gray-600">Sumber Terbanyak</p>
+            <p className="text-lg font-semibold text-purple-700">
+              {filteredDatasets.filter((d) => d.source === "Manual").length >
+              filteredDatasets.filter((d) => d.source === "User").length
+                ? "Admin"
+                : "Pelaku"}
+            </p>
+          </div>
         </div>
 
         {filteredDatasets.length === 0 ? (
