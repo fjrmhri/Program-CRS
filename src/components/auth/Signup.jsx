@@ -1,15 +1,15 @@
 import React, { useState } from "react";
-import { auth, firestore } from "../../firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
+import logo from "../../assets/logo.PNG";
 import {
   collection,
   doc,
-  setDoc,
   getDocs,
   query,
+  setDoc,
   where,
 } from "firebase/firestore";
-import logo from "../../assets/logo.PNG";
+import { auth, firestore } from "../../firebase";
 
 export default function Signup({ onSuccess, setPage }) {
   const [form, setForm] = useState({
@@ -21,26 +21,25 @@ export default function Signup({ onSuccess, setPage }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+  // Registrasi dengan validasi nomor unik dan log error yang ramah developer
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const usersRef = collection(firestore, "users");
-    const q = query(usersRef, where("phone", "==", form.phone));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      setError("Nomor telepon sudah terdaftar.");
-      setLoading(false);
-      return;
-    }
-
-    const fakeEmail = `${form.phone}@dummy.com`;
-
     try {
+      const usersRef = collection(firestore, "users");
+      const q = query(usersRef, where("phone", "==", form.phone));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        setError("Nomor telepon sudah terdaftar.");
+        return;
+      }
+
+      const fakeEmail = `${form.phone}@dummy.com`;
+
       const userCred = await createUserWithEmailAndPassword(
         auth,
         fakeEmail,
@@ -55,9 +54,11 @@ export default function Signup({ onSuccess, setPage }) {
       });
       if (onSuccess) onSuccess();
     } catch (err) {
+      console.error("Registrasi gagal:", err);
       setError("Registrasi gagal. Silakan coba lagi.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

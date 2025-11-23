@@ -1,18 +1,12 @@
 import React, { useEffect, useState } from "react";
+import { onValue, ref, remove, set, update } from "firebase/database";
+import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
 import { db } from "../../firebase";
-import { ref, onValue, remove, update, set, push } from "firebase/database";
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  deleteUser,
-  updatePassword,
-} from "firebase/auth";
 import {
   UserCircleIcon,
   PencilSquareIcon,
   TrashIcon,
   PlusCircleIcon,
-  KeyIcon,
 } from "@heroicons/react/24/outline";
 
 export default function UserManagement() {
@@ -69,17 +63,6 @@ export default function UserManagement() {
       setPassword("");
     } catch (err) {
       alert("Gagal menambah user: " + err.message);
-    }
-  };
-
-  const handleResetPassword = async (uid, newPassword) => {
-    try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      await updatePassword(user, newPassword);
-      alert("Password berhasil direset");
-    } catch (err) {
-      alert("Gagal reset password: " + err.message);
     }
   };
 

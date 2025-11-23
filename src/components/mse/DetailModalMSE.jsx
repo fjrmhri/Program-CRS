@@ -1,7 +1,4 @@
 import React from "react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import logo from "../../assets/logo.PNG";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import MSEDocument from "./MSEDocument";
 
@@ -42,67 +39,9 @@ export default function DetailModalMSE({ data, onClose }) {
     );
   };
 
-  const handleExportPDF = async () => {
-    const doc = new jsPDF("p", "mm", "a4");
-    const img = new Image();
-    img.src = logo;
-    await new Promise((res) => (img.onload = res));
-    doc.addImage(img, "PNG", 10, 10, 30, 30);
-
-    doc.setFontSize(12);
-    doc.text("PT. RIAU ANDALAN PULP AND PAPER", 45, 15);
-    doc.setFontSize(11);
-    doc.text("Community Development – SME’s Program", 45, 22);
-    doc.setFontSize(14);
-    doc.text("Formulir Monitoring Mitra Dampingan SME’s OFFLINE", 55, 32);
-
-    let y = 45;
-    doc.setFontSize(10);
-    [
-      ["Nama Pelaku/Pemilik/Lembaga", meta.nama],
-      ["Usaha/Merk Produk", meta.usaha],
-      ["Nomor HP/WA", meta.hp],
-      ["Desa", meta.desa],
-      ["Kota/Kabupaten", meta.kota],
-      ["Estate", meta.estate],
-      ["Nama CDO", meta.cdo],
-      ["Klasifikasi Mitra", meta.klasifikasi],
-    ].forEach(([label, val]) => {
-      doc.text(`${label}: ${val || "-"}`, 10, y);
-      y += 6;
-    });
-    y += 4;
-
-    const headers = ["Uraian", "Item", "Hasil Monitoring"];
-
-    const body = monitoring.flatMap((row) =>
-      row.uraian === "Omset / penjualan per bulan"
-        ? [[row.uraian, "-", formatHasil(row.items?.[0]?.hasil)]]
-        : row.items.map((item) => [
-            row.uraian,
-            item.nama || "-",
-            formatHasil(item.hasil),
-          ])
-    );
-
-    autoTable(doc, {
-      startY: y,
-      head: [headers],
-      body,
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [230, 230, 230] },
-      margin: { left: 10, right: 10 },
-    });
-
-    const safeFileName = (meta?.nama || "data")
-      .replace(/\s+/g, "_")
-      .replace(/[^\w\-]/g, "");
-    doc.save(`MSE_Monitoring_${safeFileName}.pdf`);
-  };
-
   const safeFileName = (meta?.nama || "data")
     .replace(/\s+/g, "_")
-    .replace(/[^\w\-]/g, "");
+    .replace(/[^\w-]/g, "");
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex justify-center items-start pt-10 overflow-y-auto">

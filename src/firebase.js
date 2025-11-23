@@ -1,10 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getDatabase } from "firebase/database";
-import {
-  getAuth,
-  setPersistence,
-  browserLocalPersistence,
-} from "firebase/auth";
+import { browserLocalPersistence, getAuth, setPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -25,4 +21,7 @@ export const auth = getAuth(app);
 export const firestore = getFirestore(app);
 
 // Set persistence ke local (hanya perlu dijalankan sekali, misal di file ini)
-setPersistence(auth, browserLocalPersistence);
+// Menambahkan penanganan error agar konfigurasi tidak membungkam kegagalan
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.error("Gagal mengatur persistence Firebase:", error);
+});

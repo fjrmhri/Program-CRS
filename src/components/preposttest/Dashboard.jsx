@@ -1,33 +1,45 @@
 import React, { useEffect, useState } from "react";
-import { db } from "../../firebase";
-import { ref, onValue, remove } from "firebase/database";
+import { onValue, ref, remove } from "firebase/database";
 import { addLog } from "../../utils/logUtils";
+import { db } from "../../firebase";
 
 export default function Dashboard({ user, onAdd, onView, onEdit }) {
   const [datasets, setDatasets] = useState([]);
   const [selectedDataset, setSelectedDataset] = useState("Semua");
+  const [errorMessage, setErrorMessage] = useState("");
 
+  // Mengambil data realtime dengan fallback ketika gagal memuat
   useEffect(() => {
     const q = ref(db, "datasets");
-    return onValue(q, (snapshot) => {
-      const data = snapshot.val() || {};
-      const arr = Object.entries(data).map(([id, val]) => ({ id, ...val }));
-      arr.sort((a, b) => b.createdAt - a.createdAt);
-      setDatasets(arr);
-    });
+    return onValue(
+      q,
+      (snapshot) => {
+        const data = snapshot.val() || {};
+        const arr = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+        arr.sort((a, b) => b.createdAt - a.createdAt);
+        setDatasets(arr);
+      },
+      (error) => {
+        console.error("Gagal membaca data datasets:", error);
+        setErrorMessage("Tidak dapat memuat data. Periksa koneksi atau ulangi nanti.");
+      }
+    );
   }, []);
 
   const handleDelete = async (id) => {
     if (confirm("Yakin hapus data ini?")) {
       const dataToDelete = datasets.find((d) => d.id === id);
-      await remove(ref(db, `datasets/${id}`));
-      await addLog({
-        namaUser: user?.nama || "Unknown",
-        aksi: `${user?.nama || "User"} menghapus data Pre-Post Test (${
-          dataToDelete?.title || id
-        })`,
-        dataTerkait: dataToDelete,
-      });
+      try {
+        await remove(ref(db, `datasets/${id}`));
+        await addLog({
+          namaUser: user?.nama || "Unknown",
+          aksi: `${user?.nama || "User"} menghapus data Pre-Post Test (${dataToDelete?.title || id})`,
+          dataTerkait: dataToDelete,
+        });
+      } catch (error) {
+        console.error("Gagal menghapus dataset:", error);
+        setErrorMessage("Data tidak berhasil dihapus. Coba lagi dalam beberapa saat.");
+      }
     }
   };
 
@@ -55,17 +67,13 @@ export default function Dashboard({ user, onAdd, onView, onEdit }) {
         rawData.reduce((sum, d) => sum + (d.pre || 0), 0) / rawData.length;
       const avgPost =
         rawData.reduce((sum, d) => sum + (d.post || 0), 0) / rawData.length;
-      improvement = `${(((avgPost - avgPre) / (avgPre || 1)) * 100).toFixed(
-        1
-      )}%`;
+      improvement = `${(((avgPost - avgPre) / (avgPre || 1)) * 100).toFixed(1)}%`;
 
       // Jumlah peserta
       totalParticipants = rawData.length;
 
       // Juara 1 (peserta dengan selisih terbesar)
-      const ranked = [...rawData].sort(
-        (a, b) => b.post - b.pre - (a.post - a.pre)
-      );
+      const ranked = [...rawData].sort((a, b) => b.post - b.pre - (a.post - a.pre));
       topOne = ranked[0]?.nama || "-";
     }
   }
@@ -101,9 +109,7 @@ export default function Dashboard({ user, onAdd, onView, onEdit }) {
     <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
-        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-blue-700">
-          Data Pre-Post Test
-        </h2>
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-blue-700">Data Pre-Post Test</h2>
         <button
           onClick={onAdd}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm sm:text-base font-semibold shadow hover:bg-blue-700 active:scale-95 transition"
@@ -111,6 +117,12 @@ export default function Dashboard({ user, onAdd, onView, onEdit }) {
           + Tambah Data
         </button>
       </div>
+
+      {errorMessage && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+          {errorMessage}
+        </div>
+      )}
 
       {/* SELECT DATASET */}
       <div className="mb-6 flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
@@ -150,12 +162,8 @@ export default function Dashboard({ user, onAdd, onView, onEdit }) {
             <thead className="bg-gray-100">
               <tr>
                 <th className="px-3 py-2 text-left">Judul</th>
-                <th className="px-3 py-2 text-left hidden md:table-cell">
-                  Pre
-                </th>
-                <th className="px-3 py-2 text-left hidden md:table-cell">
-                  Post
-                </th>
+                <th className="px-3 py-2 text-left hidden md:table-cell">Pre</th>
+                <th className="px-3 py-2 text-left hidden md:table-cell">Post</th>
                 <th className="px-3 py-2 text-left">Peserta</th>
                 <th className="px-3 py-2 text-left">Aksi</th>
               </tr>

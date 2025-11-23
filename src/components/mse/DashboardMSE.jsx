@@ -219,12 +219,7 @@ export default function DashboardMSE({ user, onAddForm, onView, onCompare }) {
 
   const handleEdit = (data) => setEditData(data);
 
-  const handleDelete = async (
-    uidOrId,
-    id,
-    source = "bookkeeping",
-    meta = {}
-  ) => {
+  const handleDelete = async (uidOrId, _id, meta = {}) => {
     if (!confirm("Yakin ingin menghapus SEMUA data UMKM ini?")) return;
 
     const { nama, usaha } = meta;
@@ -291,7 +286,6 @@ export default function DashboardMSE({ user, onAddForm, onView, onCompare }) {
       datasets,
     });
   };
-  // Tambahkan ini di atas fungsi handleShowChart
   const normalizeDate = (str) => {
     if (!str) return null;
     const cleaned = str.toString().trim();
@@ -303,17 +297,6 @@ export default function DashboardMSE({ user, onAddForm, onView, onCompare }) {
   };
 
   const handleShowChart = (d) => {
-    // Normalisasi format tanggal ke yyyy-mm-dd
-    const normalizeDate = (str) => {
-      if (!str) return null;
-      const cleaned = str.toString().trim();
-      if (/^\d{2}-\d{2}-\d{4}$/.test(cleaned)) {
-        const [dd, mm, yyyy] = cleaned.split("-");
-        return `${yyyy}-${mm}-${dd}`;
-      }
-      return cleaned;
-    };
-
     let comparisonList = [];
 
     if (d.source === "Manual") {

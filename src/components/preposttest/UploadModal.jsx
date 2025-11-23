@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { db } from "../../firebase";
 import { ref, set } from "firebase/database";
 import { v4 as uuidv4 } from "uuid";
-import { parseExcel, computeStats } from "../../utils/excelUtils";
-import Spinner from "./Spinner";
+import { computeStats, parseExcel } from "../../utils/excelUtils";
 import { addLog } from "../../utils/logUtils";
+import { db } from "../../firebase";
+import Spinner from "./Spinner";
 
 export default function UploadModal({ user, initialData, onClose, onSuccess }) {
   const isEditing = Boolean(initialData);
@@ -22,9 +22,11 @@ export default function UploadModal({ user, initialData, onClose, onSuccess }) {
   const [postDate, setPostDate] = useState(defaultPostDate);
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     if (!title || !preDate || !postDate) return alert("Semua isian wajib!");
 
     if (!isEditing && !file) return alert("Silakan pilih file dataset.");
@@ -74,7 +76,8 @@ export default function UploadModal({ user, initialData, onClose, onSuccess }) {
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      alert(`Gagal upload: ${err.message}`);
+      console.error("Gagal memproses unggahan:", err);
+      setError(`Gagal upload: ${err.message}`);
     }
     setLoading(false);
   };
@@ -96,6 +99,12 @@ export default function UploadModal({ user, initialData, onClose, onSuccess }) {
               : "Silakan isi detail data dan upload file Excel untuk melanjutkan"}
           </p>
         </div>
+
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
         {/* INPUT TITLE */}
         <div>

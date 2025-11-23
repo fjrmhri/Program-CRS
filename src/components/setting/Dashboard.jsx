@@ -22,8 +22,6 @@ import {
   onSnapshot,
   updateDoc,
   doc,
-  where,
-  getDocs,
 } from "firebase/firestore";
 import {
   ref as rtdbRef,
@@ -108,8 +106,8 @@ export default function DashboardSetting({ user, onLogout }) {
             if (bookSnap.exists()) {
               bookkeepingCount = Object.keys(bookSnap.val() || {}).length;
             }
-          } catch (e) {
-            // noop
+          } catch (error) {
+            console.error("Gagal menghitung data bookkeeping pelaku:", error);
           }
           return { uid, bookkeepingCount, ...meta };
         })

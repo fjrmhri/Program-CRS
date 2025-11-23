@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
 });
 
 const MSEDocument = ({ data }) => {
-  const { meta, monitoring, comparison } = data;
+  const { meta, monitoring } = data;
 
   const metaData = [
     ["Nama Pelaku/Pemilik/Lembaga UMKM", meta.nama],

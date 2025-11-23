@@ -62,7 +62,7 @@ export default function FormModalComparisonMSE({ data, onClose }) {
   const handleItemChange = (monIdx, itemIdx, value) => {
     const copy = monitoring.map((m) => ({
       ...m,
-      items: m.items.map((it, ii) => ({ ...it })),
+      items: m.items.map((it) => ({ ...it })),
     }));
     copy[monIdx].items[itemIdx].hasil = format(value);
     setMonitoring(recalculate(copy));
