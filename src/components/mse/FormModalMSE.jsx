@@ -136,7 +136,6 @@ export default function FormModalMSE({ onClose, existingData }) {
   const recalc = (mon) => {
     const prod = mon.find((m) => m.uraian === "Jumlah produksi per bulan");
     const biaya = mon.find((m) => m.uraian === "Biaya operasional per bulan");
-    const omst = mon.find((m) => m.uraian === "Omset / penjualan per bulan");
 
     const totalProd = prod
       ? prod.items.reduce((s, it) => s + clean(it.hasil), 0)

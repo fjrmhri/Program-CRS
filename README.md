@@ -1,29 +1,50 @@
+<p align="center">
+  <img src="https://img.shields.io/github/stars/fjrmhri/Program-CRS?style=for-the-badge&logo=github&color=8b5cf6" alt="Stars"/>
+  <img src="https://img.shields.io/github/license/fjrmhri/Program-CRS?style=for-the-badge&color=10b981" alt="License"/>
+  <img src="https://img.shields.io/badge/React-18.3.1-61dafb?style=for-the-badge&logo=react&logoColor=000" alt="React"/>
+  <img src="https://img.shields.io/badge/Vite-7.0.4-646cff?style=for-the-badge&logo=vite&logoColor=fff" alt="Vite"/>
+  <img src="https://img.shields.io/badge/Firebase-12.0.0-FFCA28?style=for-the-badge&logo=firebase" alt="Firebase"/>
+  <img src="https://img.shields.io/badge/TailwindCSS-3.4.17-38bdf8?style=for-the-badge&logo=tailwind-css" alt="TailwindCSS"/>
+</p>
+
 # Program Corporate Social Responsibility Dashboard
 
-A responsive admin dashboard for monitoring Corporate Social Responsibility (CSR) programs at Estate Cerenti. The app centralises Pre-Post Test analytics, MSE offline submissions, and administrator settings inside a single Firebase-backed experience.
+Dasbor admin responsif untuk memantau program Corporate Social Responsibility (CSR) di Estate Cerenti. Aplikasi ini memusatkan analitik Pre-Post Test, pengelolaan MSE offline, serta pengaturan administrator dalam satu pengalaman berbasis Firebase.
 
-## Features
-- **Secure authentication** – phone-based login/signup stored in Firebase Authentication & Firestore.
-- **Pre-Post Test analytics** – upload Excel/CSV datasets, review charts, export participant rankings, edit or delete data, and view auto-generated statistics.
-- **MSE offline management** – review monitoring entries from manual uploads and field submissions, compare time ranges, and inspect detail modals.
-- **Admin settings** – update admin profile, rotate passwords, inspect detailed activity logs, and manage participant accounts stored in Realtime Database.
-- **Activity logging** – every critical mutation (upload, edit, delete) is logged to Firestore for traceability.
-- **Responsive UI** – optimised layouts for desktop and mobile with Tailwind CSS and Poppins typography.
+## Fitur Utama
+- **Autentikasi aman** dengan nomor telepon menggunakan Firebase Authentication & Firestore.
+- **Analitik Pre-Post Test** untuk unggah Excel/CSV, melihat statistik otomatis, grafik, serta ekspor peringkat peserta.
+- **Manajemen MSE offline** guna meninjau entri monitoring, membandingkan rentang waktu, dan membuka detail modal.
+- **Pengaturan admin** meliputi pembaruan profil, rotasi sandi, dan penelusuran log aktivitas di Realtime Database.
+- **Pencatatan aktivitas** di Firestore untuk setiap aksi penting (unggah, edit, hapus) sebagai audit trail.
+- **Antarmuka responsif** dengan Tailwind CSS dan tipografi Poppins yang nyaman di desktop maupun mobile.
 
-## Tech Stack
-- [React 18](https://react.dev/) with Vite
-- Tailwind CSS
-- Firebase (Authentication, Firestore, Realtime Database)
-- Chart.js via `react-chartjs-2`
-- Excel/CSV parsing with `exceljs` & `papaparse`
+## Cara Instalasi & Menjalankan
+1. **Klon repositori & masuk ke folder proyek**
+   ```bash
+   git clone <URL_REPO>
+   cd Program-CRS
+   ```
+2. **Pasang dependensi**
+   ```bash
+   npm install
+   ```
+3. **Jalankan server pengembangan**
+   ```bash
+   npm run dev
+   ```
+   Vite akan menampilkan URL lokal (default `http://localhost:5173`).
+4. **Opsi pengecekan kode**
+   ```bash
+   npm run lint
+   ```
+5. **Bangun versi produksi**
+   ```bash
+   npm run build
+   ```
 
-## Prerequisites
-- Node.js 18+
-- npm 9+
-- Firebase project with Authentication, Firestore, and Realtime Database enabled
-
-## Environment Variables
-Create a `.env` file in the project root (same level as `package.json`) and provide the Firebase configuration keys:
+## Konfigurasi Lingkungan
+Buat berkas `.env` di akar proyek (sejajar dengan `package.json`) dan isi dengan kredensial Firebase Anda:
 
 ```bash
 VITE_FIREBASE_API_KEY=your_api_key
@@ -36,51 +57,20 @@ VITE_FIREBASE_APP_ID=your_app_id
 VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
 ```
 
-## Getting Started
-1. **Install dependencies**
-   ```bash
-   npm install
-   ```
-2. **Run the development server**
-   ```bash
-   npm run dev
-   ```
-   The Vite server prints a local URL (default `http://localhost:5173`).
-3. **Lint the project**
-   ```bash
-   npm run lint
-   ```
-4. **Create a production build**
-   ```bash
-   npm run build
-   ```
-
-## Usage Notes
-- Pre/Post Test uploads accept `.xlsx`, `.xls`, or `.csv` files with participant columns: `Nama`, `Nama Desa`, `Nama Posyandu`, `Nilai Pre Test`, and `Nilai Post Test`.
-- Editing a dataset allows metadata changes without re-uploading a file; upload a new file to recalculate statistics.
-- Activity logs are stored in the Firestore `logs` & `activityLogs` collections.
-- Admin settings rely on phone numbers as document IDs in `users` collection.
-
-## Project Structure
+## Struktur Proyek
 ```
 src/
 ├─ components/
-│  ├─ auth/              # Login & signup forms
-│  ├─ mse/               # MSE dashboards & modals
-│  ├─ preposttest/       # Pre/Post Test dashboards, charts, modals
-│  ├─ setting/           # Admin configuration screens
-│  └─ SettingModal.jsx   # Quick overlay modal for user profile/logs
-├─ utils/                # Excel parsing + logging helpers
-├─ firebase.js           # Firebase client setup
-├─ App.jsx               # Application shell & routing between modules
-└─ main.jsx              # React entrypoint
+│  ├─ auth/              # Form login & signup
+│  ├─ mse/               # Dashboard & modal MSE offline
+│  ├─ preposttest/       # Dashboard, grafik, dan modal Pre/Post Test
+│  ├─ setting/           # Layar konfigurasi admin
+│  └─ SettingModal.jsx   # Modal pengaturan cepat
+├─ utils/                # Utilitas parsing Excel & pencatatan log
+├─ firebase.js           # Inisialisasi klien Firebase
+├─ App.jsx               # Kerangka aplikasi & navigasi menu
+└─ main.jsx              # Entrypoint React
 ```
 
-## Contributing
-1. Fork & clone the repository.
-2. Create a branch for your feature/fix.
-3. Ensure `npm run lint` passes and include relevant documentation updates.
-4. Open a Pull Request describing your changes.
-
-## License
-This project is proprietary to the Estate Cerenti CSR team. Contact the maintainers for reuse permissions.
+## Lisensi
+Proyek ini digunakan internal oleh tim CSR Estate Cerenti. Hubungi maintainer bila memerlukan izin penggunaan lebih lanjut.

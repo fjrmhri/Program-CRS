@@ -1,3 +1,6 @@
+/* eslint-env node */
+/* global module, require */
+
 module.exports = {
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",

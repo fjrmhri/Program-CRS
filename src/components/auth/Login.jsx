@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../firebase";
 import logo from "../../assets/logo.PNG";
+import { auth } from "../../firebase";
 
 export default function Login({ onSuccess, setPage }) {
   const [phone, setPhone] = useState("");
@@ -9,6 +9,7 @@ export default function Login({ onSuccess, setPage }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Menangani proses login dengan umpan balik error yang jelas
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -20,9 +21,11 @@ export default function Login({ onSuccess, setPage }) {
       await signInWithEmailAndPassword(auth, fakeEmail, password);
       if (onSuccess) onSuccess();
     } catch (err) {
-      setError("Nomor telepon atau password salah.");
+      console.error("Gagal login:", err);
+      setError("Nomor telepon atau password salah atau jaringan bermasalah.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
